@@ -47,6 +47,7 @@ type WorkflowPhase =
 
 let currentPhase: WorkflowPhase = "idle";
 let activeGoalDocument: string | null = null;
+let clarificationDone: boolean = false;
 
 const cacheStats: CacheStats = { totalInput: 0, totalCacheRead: 0 };
 const activeTools: ActiveTools = { running: new Map() };
@@ -850,6 +851,17 @@ export default function (pi: ExtensionAPI) {
     ? "- Use ask_user_question if you need user input on trade-offs."
     : "- If trade-off input is missing, document the trade-off and recommend what should be clarified by the root session.";
 
+  const CLARIFICATION_PRIORITY_GUIDANCE = `
+
+## Ambiguity Assessment
+
+Before implementing any user request, assess whether the scope is clear:
+- If the request is vague, ambiguous, or underspecified → use the agentic-clarification skill (invoke /clarify or follow its rules)
+- If the request is trivially clear (single file, obvious fix) → proceed directly
+- When in doubt → err on the side of clarification
+
+Do not start multi-step implementation without a clear understanding of what the user wants.`;
+
   const PHASE_GUIDANCE: Record<WorkflowPhase, string> = {
     idle: "",
     clarifying: [
@@ -907,7 +919,11 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("before_agent_start", async (event, _ctx) => {
     const isSkillInvocation = SKILL_INVOCATION_RE.test(event.prompt ?? "");
-    const guidance = (isRootSession && !isSkillInvocation) ? PHASE_GUIDANCE[currentPhase] : "";
+    const phaseGuidance = (isRootSession && !isSkillInvocation) ? PHASE_GUIDANCE[currentPhase] : "";
+    // Inject clarification priority guidance when idle and clarification not yet done
+    const idleGuidance = (isRootSession && !isSkillInvocation && currentPhase === "idle" && !clarificationDone)
+      ? CLARIFICATION_PRIORITY_GUIDANCE
+      : "";
 
     let delegationInfo = "";
     if (depthConfig.canDelegate && !isTeamWorker) {
@@ -917,9 +933,10 @@ export default function (pi: ExtensionAPI) {
       delegationInfo = `\n\n## Delegation Guards\n- Current depth: ${depthConfig.currentDepth}, max: ${depthConfig.maxDepth}\n- Cycle prevention: ${depthConfig.preventCycles ? "enabled" : "disabled"}\n- Ancestor stack: ${depthConfig.ancestorStack.length > 0 ? depthConfig.ancestorStack.join(" -> ") : "(root)"}\n\n## Available Subagents\n${agentList}`;
     }
 
-    if (!guidance && !delegationInfo) return;
+    const combined = phaseGuidance + idleGuidance;
+    if (!combined && !delegationInfo) return;
     return {
-      systemPrompt: event.systemPrompt + (guidance || "") + delegationInfo,
+      systemPrompt: event.systemPrompt + combined + delegationInfo,
     };
   });
 
@@ -1016,6 +1033,7 @@ export default function (pi: ExtensionAPI) {
           details: {
             phase: currentPhase,
             activeGoalDocument,
+            clarificationDone,
           },
         },
       };
@@ -1037,10 +1055,14 @@ export default function (pi: ExtensionAPI) {
       const details = event.compactionEntry.details as {
         phase?: string;
         activeGoalDocument?: string | null;
+        clarificationDone?: boolean;
       };
       if (details.phase) currentPhase = details.phase as WorkflowPhase;
       if (details.activeGoalDocument !== undefined) {
         activeGoalDocument = details.activeGoalDocument;
+      }
+      if (details.clarificationDone !== undefined) {
+        clarificationDone = details.clarificationDone as boolean;
       }
     }
   });
@@ -1088,6 +1110,9 @@ export default function (pi: ExtensionAPI) {
     if (toolName === "write") {
       const terminal = PHASE_TERMINAL_DIR[currentPhase];
       if (terminal && terminal.test(relativePath)) {
+        if (currentPhase === "clarifying") {
+          clarificationDone = true;
+        }
         currentPhase = "idle";
         activeGoalDocument = null;
       }
@@ -1596,6 +1621,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     currentPhase = "idle";
     activeGoalDocument = null;
+    clarificationDone = false;
 
     cacheStats.totalInput = 0;
     cacheStats.totalCacheRead = 0;
