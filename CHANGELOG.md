@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.15.0](https://github.com/tmdgusya/roach-pi/compare/v1.14.1...v1.15.0) (2026-05-01)
+
+### Features
+
+* adopt pi v0.71 ux compatibility ([51644fb](https://github.com/tmdgusya/roach-pi/commit/51644fb8fe0ad17827d7947a6185499f3bb781fa))
+
 ## [1.14.1](https://github.com/tmdgusya/roach-pi/compare/v1.14.0...v1.14.1) (2026-04-29)
 
 ### Bug Fixes
