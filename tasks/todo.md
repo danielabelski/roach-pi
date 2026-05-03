@@ -1,297 +1,132 @@
-# Task: Selective pi-subagents Feature Adoption Milestone Plan
-
-## Plan: pi v0.71.0 UX compatibility adoption
-
-**Goal:** Apply the top 3 user-facing v0.71.0 adoption candidates to this extension set: composable FFF editor wrapping, `message_end` replacement-aware harness parsing, and `PI_CODING_AGENT_SESSION_DIR` support for subagent/sandbox paths.
-
-Done when:
-- [x] Confirm v0.71.0 API shapes from installed docs/types before editing
-- [x] Update `extensions/fff-search` to wrap any existing custom editor factory via `ctx.ui.getEditorComponent()` while preserving tools-only/disabled cleanup behavior
-- [x] Add/update FFF tests proving existing editor components are composed instead of clobbered
-- [x] Update `extensions/agentic-harness` runner parsing for finalized `message_end` replacement semantics without breaking `turn_end`/`agent_end` aggregation
-- [x] Add/update harness tests for replacement/stale-message behavior and metadata/usage correctness
-- [x] Add `PI_CODING_AGENT_SESSION_DIR` path resolution into subagent/sandbox writable roots where child pi session storage can be customized
-- [x] Add/update harness tests for custom session-dir environment handling
-- [x] Run focused tests, then extension builds/tests for affected packages
-
-### Review
-- FFF now captures `ctx.ui.getEditorComponent()` and wraps the previous editor factory when present, preserving existing editor customizations while injecting FFF `@` mention autocomplete. Follow-up review found disabled/error/shutdown paths could clobber pre-existing editors; fixed by restoring only when FFF installed its wrapper.
-- Harness runner event aggregation now replaces assistant messages sharing `responseId`/`id`, then rebuilds usage and nested subagent metadata so stale finalized messages do not double-count.
-- Sandbox writable roots now include `PI_CODING_AGENT_SESSION_DIR` when set, in addition to `PI_CODING_AGENT_DIR`, for root bash and subagent sandbox launches.
-- Independent re-review after fixes: reviewer-bug and reviewer-consistency reported no findings.
-- Verification passed:
-  - `cd extensions/fff-search && npm test -- --run tests/index.test.ts && npm run build`
-  - `cd extensions/agentic-harness && npm test -- --run tests/runner-events.test.ts tests/agent-dir.test.ts && npm run build`
-  - `cd extensions/agentic-harness && npm test`
-  - `cd extensions/fff-search && npm test`
-  - `git diff --check`
-- Note: `npm ci` reported existing npm audit vulnerabilities in both affected extension packages; no new dependencies were added.
-
-
-## Plan: Team mode architecture mermaid diagram (worker-1)
-
-Done when:
-- [x] Inspect existing team mode architecture documentation/source enough to avoid inventing components
-- [x] Add a bounded Mermaid diagram for the team mode architecture
-- [x] Verify the Markdown/Mermaid syntax and repository diff
-- [x] Write required final worker report
-
-### Review
-- Added a bounded Mermaid flowchart to `TEAM_ARCH.md` showing user/tool entry, `index.ts`, `runTeam`, state persistence, backend selection, native/tmux worker execution, command lifecycle, synthesis, cleanup, and follow-up command flow.
-- Verification passed: `git diff --check`; Node script confirmed exactly one Mermaid block with expected architecture nodes.
-- Remaining blockers: none.
-
-## Plan: Team mode architecture mermaid diagram (worker-2)
-
-Done when:
-- [x] Inspect existing team mode architecture documentation/source enough to avoid inventing components
-- [x] Add a bounded Mermaid diagram for the team mode architecture without changing runtime code
-- [x] Verify the Markdown/Mermaid syntax and repository diff
-- [x] Write required final worker report to the assigned final.md path
-
-### Review
-- Added `docs/engineering-discipline/harness/team-mode-architecture.md` with a Mermaid flowchart of the team mode architecture, covering `/team` entry, root tool registration, `runTeam`, durable state, backend selection, native/tmux dispatch, worker guards, results, synthesis, and follow-up command flow.
-- Verification passed: Python sanity checks confirmed one balanced Mermaid block and expected architecture nodes; `git diff --check` passed.
-- Remaining blockers: none.
-
-
-**Created:** 2026-04-24 22:13
-**Status:** milestone-planning
+# Workspace Memory Prompt Cap — Completed
 
 ## Goal
-Plan a dependency-light implementation of selected `nicobailon/pi-subagents` ideas into `extensions/agentic-harness`, explicitly excluding Model Fallback.
+Cap workspace-memory system prompt injection size so recalled memories cannot bloat every LLM turn.
 
-## Scope
-- [x] Compose a self-contained Problem Brief
-- [x] Run 5 independent milestone reviewers in parallel
-- [x] Synthesize reviewer outputs into a milestone DAG
-- [x] Validate the DAG independently
-- [x] Present milestone plan for user approval
-- [x] Save approved milestone artifacts under `docs/engineering-discipline/harness/pi-subagents-selective-adoption/`
-- [x] Implement milestones M1–M7
-- [x] Run parallel review and address findings
-- [x] Run final verification
-- [x] Save independent review document
+## Planning Checklist
+- [x] Inspect workspace-memory recall/injection implementation.
+- [x] Inspect existing tests and verification commands.
+- [x] Write executable plan under `docs/engineering-discipline/plans/`.
+- [x] Self-review plan for exact files, commands, dependencies, and verification.
+- [x] Present plan path and receive approval for subagent execution.
 
-## Follow-up Plan: Subagent Integration Test Hardening
+## Execution
+- [x] Task 1 implemented and validated: bounded formatter in `extensions/workspace-memory/recall.ts`.
+- [x] Task 2 implemented and validated: focused recall formatting tests in `extensions/workspace-memory/tests/recall.test.ts`.
+- [x] Task 3 implemented and validated: integration prompt cap assertion in `extensions/workspace-memory/tests/integration.test.ts`.
+- [x] Task 4 final verification passed.
 
-- [x] Write executable plan for fork positive-path and artifact output orchestration integration tests
-- [x] Execute follow-up plan if approved
+## Output
+- Plan saved: `docs/engineering-discipline/plans/2026-05-03-workspace-memory-prompt-cap.md`
+- Commits:
+  - `586e1db fix(memory): cap recalled prompt context size`
+  - `57ec7be test(memory): cover recalled prompt size caps`
+  - `56d7dae test(memory): verify bounded system prompt injection`
 
-### Follow-up execution results
-- Added fork positive-path integration coverage in `extensions/agentic-harness/tests/subagent-process.test.ts`.
-- Added artifact output orchestration integration coverage in `extensions/agentic-harness/tests/subagent-process.test.ts` and `extensions/agentic-harness/tests/fixtures/subagent-parent.mjs`.
-- Hardened `extensions/agentic-harness/tests/extension.test.ts` so root-session tests clear inherited subagent environment variables.
-- Stabilized the existing late-abort semantic-success test by waiting for semantic output before aborting.
-- Final verification: PASS — `cd extensions/agentic-harness && npm ci && npm run build && npm test` (29 files, 264 tests).
-
-## Requested Feature Set
-- `maxOutput` / output truncation
-- agent-level `maxSubagentDepth`
-- dependency-free frontmatter parser improvements
-- `output` / `reads` / `progress` file-based IO
-- chain/run artifact directory
-- parallel `worktree` isolation
-- `context: "fork"` session mode
-
-## Excluded
-- Model Fallback
-- depending on `pi-subagents` as a package
-- Agents Manager TUI
-- MCP direct tools
-- Intercom bridge
-- Gist session sharing
-- full async/background framework
-
-## Verification Strategy
-- **Command:** `cd extensions/agentic-harness && npm ci && npm run build && npm test`
-- **Validates:** extension-local dependency install, strict TypeScript build, and full Vitest regression suite.
-
-## Team Mode Exploration Test: subagent / team 오케스트레이션 관련 파일 조사
-
-- [x] Identify likely entry points for `team` and `subagent` orchestration
-- [x] Dispatch parallel explorers to inspect command surface, execution flow, and tests/docs
-- [x] Summarize findings with file map and next-step recommendations
-
-## Bug Fix Plan: team run state ENOENT on persist
-
-Done when:
-- [x] Reproduce the `team` persist failure or equivalent low-level `writeTeamRunRecord` collision deterministically
-- [x] Add a failing regression test that captures the root cause
-- [x] Apply the smallest fix to eliminate temp-file rename collisions during concurrent persists
-- [x] Verify the new regression and related team-state/team tests pass
-
-### Bug fix results
-- Root cause: concurrent `writeTeamRunRecord()` calls could generate the same temp-file path because the name only used `process.pid` + `Date.now()`. Same-millisecond persists then raced on the same `*.tmp` path, causing `rename(...tmp, team-run.json)` to throw `ENOENT` after another writer had already moved the file.
-- Regression test added: `extensions/agentic-harness/tests/team-state.test.ts`
-- Fix applied: `extensions/agentic-harness/team-state.ts` now adds a random hex suffix to each temp-file path before `rename()`.
-- Verification:
-  - `cd extensions/agentic-harness && npm test -- --run tests/team-state.test.ts` ✅
-  - `cd extensions/agentic-harness && npm test -- --run tests/team.test.ts` ✅
-  - `cd extensions/agentic-harness && npm test -- --run tests/extension.test.ts` ✅
-  - `cd extensions/agentic-harness && npm run build` ✅
-  - `cd extensions/agentic-harness && npm test` ✅ (31 files, 286 tests)
-
-## Bug Fix Plan: ask_user_question direct input fallback text should be English
-
-Done when:
-- [x] Reproduce the current Korean fallback label in the ask_user_question tool behavior
-- [x] Add or update a regression test that expects the English fallback label
-- [x] Change the fallback constant and schema/prompt text to use the English label consistently
-- [x] Verify the targeted ask_user_question tests and extension build pass
-
-### Bug fix results
-- Reproduced via `cd extensions/agentic-harness && npm test -- --run tests/extension.test.ts` after changing the ask_user_question assertions to expect English; the suite failed because the tool still appended and matched `직접 입력하기`.
-- Regression test updated: `extensions/agentic-harness/tests/extension.test.ts`
-- Fix applied: `extensions/agentic-harness/index.ts` now uses `Enter custom response` for the fallback choice label and schema description.
-- Verification:
-  - `cd extensions/agentic-harness && npm test -- --run tests/extension.test.ts` ✅
-  - `cd extensions/agentic-harness && npm run build` ✅
-
-### Exploration results
-- Native `team` runtime files: `extensions/agentic-harness/team.ts`, `extensions/agentic-harness/team-state.ts`
-- Shared delegation runtime: `extensions/agentic-harness/subagent.ts`, `extensions/agentic-harness/runner-events.ts`, `extensions/agentic-harness/agents.ts`
-- User-facing registration: `extensions/agentic-harness/index.ts`
-- Strongest coverage: `extensions/agentic-harness/tests/team.test.ts`, `extensions/agentic-harness/tests/team-state.test.ts`, `extensions/agentic-harness/tests/subagent.test.ts`, `extensions/agentic-harness/tests/subagent-process.test.ts`, `extensions/agentic-harness/tests/extension.test.ts`
-- Docs/evidence: `extensions/agentic-harness/README.md`, `README.md`, `docs/engineering-discipline/reviews/2026-04-27-roach-pi-team-mode-verification.md`
-- Note: direct `team` tool invocation created `.pi/agent/runs/team-demo-test/team-run.json` but returned an `ENOENT` rename error from the tool wrapper; parallel `explorer` subagents succeeded as fallback for the investigation.
+## Verification
+- [x] `npm --prefix extensions/workspace-memory test && npm --prefix extensions/workspace-memory run build` — 5 files / 11 tests passed; TypeScript build passed.
+- [x] `git diff --stat HEAD~3..HEAD -- extensions/workspace-memory/recall.ts extensions/workspace-memory/tests/recall.test.ts extensions/workspace-memory/tests/integration.test.ts` — scoped to workspace-memory prompt cap implementation/tests.
 
 ## Review
-
-### Reviewer Dispatch
-- 5/5 reviewers completed successfully:
-  - reviewer-feasibility
-  - reviewer-architecture
-  - reviewer-risk
-  - reviewer-dependency
-  - reviewer-user-value
-
-### Key synthesis decisions
-- Treat `context: "fork"` as spike-gated because current child launch uses `--no-session` and true fork feasibility depends on Pi session support.
-- Keep worktree isolation opt-in and late because it has the highest repository-state/cleanup risk.
-- Establish config/result contracts before exposing public schema and runtime behavior.
-- Keep all new fields additive and dependency-free; no Model Fallback or `pi-subagents` package dependency.
-
-### Status
-- Milestone DAG drafted and independently validated.
-- User requested autonomous execution through completion.
-- Implementation completed.
-- Final verification passed: `cd extensions/agentic-harness && npm ci && npm run build && npm test`.
-
-### Final verification
-- Build: PASS (`tsc --noEmit`)
-- Tests: PASS — 29 files, 262 tests
-- Review: PASS — `docs/engineering-discipline/reviews/2026-04-24-pi-subagents-selective-adoption-review.md`
-- Note: `npm ci` reported 8 existing npm audit vulnerabilities; no new dependencies were added in this change.
-
-## Plan: Team mode tmux backend
-
-- [x] Clarify desired behavior: use tmux when available, keep native fallback otherwise
-- [x] Inspect current team/subagent architecture and verification surface
-- [x] Write executable implementation plan in `docs/engineering-discipline/plans/2026-04-27-team-mode-tmux-backend.md`
-- [x] Begin subagent execution
-- [x] Task 1 complete — backend contract, schema, and state fields landed (`9444b54`)
-- [x] Task 2 complete — tmux helper module and tests landed (`9c11abe`)
-- [x] Task 3 complete — tmux backend runtime integration landed (`ae6ff4b`, fixup `f0e0e12`)
-- [x] Task 4 complete — docs and root registration verification landed (`dc536b0`)
-- [x] Task 5 complete — final verification passed
-
-### Team mode tmux backend execution results
-- Task 1 commit: `9444b54 feat: add team backend selection contract`
-- Task 2 commit: `9c11abe feat: add tmux helper module for team backend`
-- Task 3 commits: `ae6ff4b feat: integrate optional tmux backend for team workers`, `f0e0e12 fix: type tmux availability mock`
-- Task 4 commit: `dc536b0 docs: describe team tmux backend and fallback behavior`
-- Final verification: `cd extensions/agentic-harness && npm run build && npm test` ✅
-- Focused regression: `cd extensions/agentic-harness && npm test -- --run tests/tmux.test.ts tests/team.test.ts tests/subagent-process.test.ts tests/extension.test.ts` ✅
-
-## Bug Fix Plan: team mode should auto split/attach inside an existing tmux client
-
-Done when:
-- [x] Reproduce the current behavior where team mode creates a detached tmux session instead of splitting the operator's active tmux client
-- [x] Add failing regression coverage for "inside tmux" pane creation/attach behavior
-- [x] Implement the smallest root-cause fix so team mode reuses the current tmux session/window when launched from tmux, while preserving detached fallback outside tmux
-- [x] Verify focused tmux/team/subagent tests and extension build pass
-
-### Bug fix results
-- Reproduced from the existing tmux helper behavior and tests: `createWorkerPanes()` always issued `tmux new-session -d ...`, so worker panes were created in a detached session rather than the operator's current tmux window.
-- Regression coverage added in `extensions/agentic-harness/tests/tmux.test.ts` for current-window pane creation and in `extensions/agentic-harness/tests/team.test.ts` for team-level ready/cleanup behavior.
-- Fix applied in `extensions/agentic-harness/tmux.ts`, `extensions/agentic-harness/team.ts`, and `extensions/agentic-harness/index.ts`: when `TMUX`/`TMUX_PANE` are present, team mode now splits worker panes into the current tmux window, emits a current-window ready message, and cleans up worker panes on successful completion; detached-session fallback remains unchanged outside tmux.
-- Docs updated: `extensions/agentic-harness/README.md`.
-- Verification:
-  - `cd extensions/agentic-harness && npm test -- --run tests/tmux.test.ts tests/team.test.ts` ✅
-  - `cd extensions/agentic-harness && npm test -- --run tests/subagent-process.test.ts tests/extension.test.ts && npm run build` ✅
-
-## Plan: Team tmux backend bugfix hardening
-
-- [x] Review reported bug list with independent bug/security/performance reviewers
-- [x] Write executable hardening plan in `docs/engineering-discipline/plans/2026-04-27-team-tmux-bugfix-hardening.md`
-- [x] Begin subagent execution
-- [x] Task 1 complete — tmux shell command handling hardened (`1f1907c`)
-- [x] Task 2 complete — tmux runtime log/lifecycle hardened (`f2c682a`)
-- [x] Task 3 complete — team-level setup/session robustness hardened (`0bedd7c`)
-- [x] Task 4 complete — tmux cleanup/sandbox caveats documented (`94302e3`)
-- [x] Task 5 complete — final verification passed after residual tmux binary propagation fix
-
-### Team tmux backend bugfix hardening final review notes
-- Highest-level verification: PASS — `cd extensions/agentic-harness && npm run build && npm test` (33 files, 305 tests).
-- Focused tmux hardening regression suite: PASS — `cd extensions/agentic-harness && npm test -- --run tests/shell.test.ts tests/tmux.test.ts tests/subagent-process.test.ts tests/team.test.ts tests/extension.test.ts` (5 files, 79 tests).
-- Manual success criteria: PASS — residual issue fixed by typing `RunAgentOptions.tmuxPane.tmuxBinary/sessionAttempt`, removing the `index.ts` cast, and using `tmuxPane.tmuxBinary ?? "tmux"` for tmux runtime `send-keys` launch and C-c termination. Added regression coverage proving a custom tmux binary handles `send-keys`.
-- Manual success criteria verified as covered by code/tests: shell-quoted `pipe-pane` log paths, stderr-only tmux helper warnings, detected tmux binary propagation through setup/runtime/cleanup, stale marker truncation, duplicate `tee` removal, useful tmux failure log tail, setup failure persistence, collision retry without deleting existing sessions, incremental log polling, tmux lifecycle/process-log events, and native behavior regression coverage.
-- Hardening commits relevant to this work: `1f1907c fix: harden tmux shell command handling`; `f2c682a fix: harden tmux runtime log and lifecycle handling`; `0bedd7c fix: handle tmux setup failures and session collisions`; `94302e3 docs: clarify tmux cleanup and sandbox caveats`; `e80f23f fix: use resolved tmux binary for worker send-keys`.
-
-## Bug Fix Plan: GitHub CI TypeScript build failure
-
-Done when:
-- [x] Reproduce the CI-equivalent failure locally
-- [x] Identify the exact TypeScript type regression causing `npm run build` to fail in `extensions/agentic-harness`
-- [x] Add or confirm guard coverage for tool argument parsing types
-- [x] Apply the smallest fix that restores strict build compatibility
-- [x] Verify the CI command sequence passes: `npm ci && cd extensions/agentic-harness && npm ci && npm test && npm run build`
-
-### Initial reproduction
-- `npm ci && cd extensions/agentic-harness && npm ci && npm test && npm run build` reproduced the GitHub Release workflow build failure.
-- Tests passed, but `tsc --noEmit` failed in `extensions/agentic-harness/index.ts` with `unknown`/`{}` values passed into typed options.
-
-### Bug fix results
-- Root cause: enum-like tool schemas used `Type.Unsafe<"literal-union">(...)`; with the current TypeBox typings this makes the static parameter type `unknown`/`{}` while preserving the runtime JSON schema, so strict TypeScript rejected those values when passed to typed runtime APIs.
-- Fix applied: added a small `stringEnum()` schema helper in `extensions/agentic-harness/index.ts` that preserves the existing `{ type: "string", enum: [...] }` JSON schema while giving TypeScript the intended literal-union static type.
-- Guard coverage confirmed: `tests/extension.test.ts` verifies the documented team tool parameter schema still exposes `type: "string"` and `enum` values.
-- Verification: PASS — `npm ci && cd extensions/agentic-harness && npm ci && npm test && npm run build` (37 files, 370 tests).
+- Added `MAX_RECALL_CONTEXT_CHARS = 8000` and `MAX_RECALL_MEMORY_CHARS = 2000`.
+- Added explicit truncation and omission markers for prompt-budget enforcement.
+- Preserved recall selection/ranking and `recalledIds` semantics; only formatted injected text is bounded.
+- Verified caller behavior in `workspace-memory/index.ts` needs no change.
 
 
-## Task: PlanProgress tracking for compliance/worker/validator stages
+---
 
-### Problem
-TaskProgress missed plan-validator/plan-compliance task updates when subagent calls identified the plan task with `planTaskId` instead of descriptive task text.
+# WebSocket Error Debugging — In Progress
 
-### Root cause
-`extensions/agentic-harness/plan-progress-events.ts` ignored deterministic `planTaskId` fields and relied on fuzzy task-text matching. Validator/compliance prompts often contain generic text like `validate`, so matching failed and no `toolCallId -> taskId` mapping was stored.
+## Problem
+- User reports frequent `WebSocket error` after tool output; example shown after writing `docs/engineering-discipline/harness/powerline-ui/checkpoints/M5-checkpoint.md`.
 
-### Desired behavior
-- `plan-compliance`, `plan-worker`, and `plan-validator` stages all appear in the same TaskProgress task lifecycle.
-- A task becomes `running` when any stage for that task starts.
-- Successful `plan-compliance`/`plan-worker` completion keeps the task running.
-- Successful `plan-validator` completion marks the task completed.
-- Any failed stage marks the task failed.
+## Debugging Plan
+- [x] Attempt reproduction first with the referenced checkpoint-sized markdown write.
+- [ ] Gather observable evidence from Pi logs / reproduction commands.
+- [ ] Form one root-cause hypothesis from evidence.
+- [ ] Add a failing guard or deterministic reproduction check before changing code.
+- [ ] Apply one targeted fix.
+- [ ] Verify original reproduction path and related tests.
 
-### Plan
-- [x] Add regression tests proving `planTaskId`-only subagent calls are tracked.
-- [x] Add stage-aware completion tests for compliance/worker/validator lifecycle.
-- [x] Update plan progress event matching to prefer deterministic `planTaskId` before fuzzy text matching.
-- [x] Update completion semantics so compliance/worker success keeps the task running, validator success completes it, and any failure fails it.
-- [x] Verify focused failure guard fails before the fix.
-- [x] Run focused tests after the fix.
-- [x] Run TypeScript build after the fix.
-- [x] Run full harness regression.
-- [x] Check repository diff for unintended changes.
+## Reproduction Notes
+- Initial local tool-write reproduction to `/tmp/pi-websocket-repro-M5-checkpoint.md` wrote 1777 bytes successfully; no `WebSocket error` appeared in this harness response.
 
-### Review
-- Reproduced the bug with a failing plan-progress event test: `plan-validator` + `task: "validate"` + `planTaskId: 1` returned no matched task before the fix.
-- Added deterministic `startTaskById(...)` handling while preserving existing fuzzy text matching fallback.
-- Changed stage semantics so worker/compliance success does not prematurely complete the task; validator success completes it; any failed stage fails it.
-- Verification passed:
-  - `cd extensions/agentic-harness && npm test -- --run tests/plan-progress-events.test.ts --reporter verbose`
-  - `cd extensions/agentic-harness && npm test -- --run tests/plan-progress-events.test.ts tests/plan-progress.test.ts --reporter verbose`
-  - `cd extensions/agentic-harness && npm run build`
-  - `cd extensions/agentic-harness && npm test` (39 files, 432 tests)
-  - `git diff --check`
+---
+
+# Powerline UI Long Run — M1 Completed
+
+## Status
+- [x] Milestone plan approved and artifacts saved under `docs/engineering-discipline/harness/powerline-ui/`.
+- [x] M1 plan saved: `docs/engineering-discipline/plans/2026-05-03-footer-status-bridge-powerline-mvp.md`.
+- [x] M1 implemented: footer status bridge + width-safe Powerline MVP.
+- [x] M1 review passed: `docs/engineering-discipline/reviews/2026-05-03-footer-status-bridge-powerline-mvp-review.md`.
+- [x] M1 checkpoint written: `docs/engineering-discipline/harness/powerline-ui/checkpoints/M1-checkpoint.md`.
+
+## Verification
+- [x] `npm --prefix extensions/agentic-harness test -- --run tests/footer.test.ts tests/plan-progress.test.ts tests/milestone-tracker.test.ts tests/extension.test.ts` — 125 passed.
+- [x] `npm --prefix extensions/agentic-harness test && npm --prefix extensions/agentic-harness run build` — 541 passed; build passed.
+- [x] `git diff -- extensions/agentic-harness/package.json extensions/agentic-harness/package-lock.json extensions/fff-search/index.ts` — no diff.
+- [x] M2 verification: `npm --prefix extensions/agentic-harness test && npm --prefix extensions/agentic-harness run build` — 552 passed; build passed.
+
+## Next
+- [x] All milestones (M1–M6 + M_final) completed.
+- [ ] Powerline UI long run is DONE.
+
+---
+
+# README Feature Story Revamp
+
+## Context
+The user wanted the root `README.md` rewritten in the spirit of `can1357/oh-my-pi`: a stronger public-facing, English README that explains the extension suite's capabilities clearly, including installation and usage. They chose a full README revamp and asked to reserve space for new hero/screenshot assets.
+
+## Plan
+- [x] Audit existing feature surface from `README.md`, extension READMEs, package metadata, and command/tool registrations.
+- [x] Draft a public-facing README structure: hero, badges, highlights, getting started, usage, commands, tools, extensions, configuration, development, testing, contributing, license.
+- [x] Create lightweight visual asset placeholders under `assets/` for the hero and screenshots so README links are valid.
+- [x] Rewrite root `README.md` in English with clear feature explanations and accurate installation/setup instructions.
+- [x] Verify markdown links/asset paths and review the final README for accuracy against the codebase.
+
+## Scope
+- In scope: root `README.md`, new `assets/` placeholder visuals.
+- Out of scope: changing runtime behavior, publishing package metadata, generating real terminal screenshots.
+
+## Verification
+- [x] Manual docs review against source files and existing docs.
+- [x] Confirmed referenced local paths exist.
+- [x] Parsed all new SVG assets as valid XML.
+- [x] Spot-checked documented commands/tools against local source and bundled package docs.
+- [x] Ran `git diff --check -- README.md assets/hero.svg assets/workflow-preview.svg assets/review-search-preview.svg tasks/todo.md`.
+
+## Review
+- Rewrote `README.md` into a public-facing landing page with hero, badges, highlights, installation, first-use workflow, feature tour, command/tool reference, configuration, repository layout, and development instructions.
+- Added lightweight SVG visuals:
+  - `assets/hero.svg`
+  - `assets/workflow-preview.svg`
+  - `assets/review-search-preview.svg`
+- Kept claims grounded in current source: no root `npm test` claim, no nonexistent `LICENSE` link, and no autonomous-dev GitHub tool claims.
+
+---
+
+# Previous Note: Milestone Planning Visibility Improvement
+
+## Context
+A live footer screenshot showed `0/6 ○M1...` while a new long-run was beginning. This was initially treated as a bug, but the user clarified the existing behavior was working; the workflow was still in planning, so it was not necessarily a completion/tracking failure.
+
+## Decision
+Keep the latest change as a visibility improvement: when a subagent explicitly references a harness milestone file, the footer can show the milestone phase earlier.
+
+## Implemented
+- `extractMilestonePathsFromArgs()` detects explicit `docs/engineering-discipline/harness/.../milestones/M1-*.md` references in subagent args.
+- `startMilestonesFromSubagentArgs()` promotes referenced milestones:
+  - explorer/planner/etc. → `planning`
+  - plan-worker/plan-compliance → `executing`
+  - plan-validator → `validating`
+- Planning promotion only marks the first non-terminal referenced milestone, avoiding artifact-list false positives.
+
+## Verification
+- Focused tests: 89 passed
+- Full suite: 53 files, 640 tests passed
+
+## Note
+This is intentionally retained as UX improvement, not because the prior behavior was proven broken.

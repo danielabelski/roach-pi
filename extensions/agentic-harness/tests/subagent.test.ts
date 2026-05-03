@@ -9,6 +9,7 @@ import {
   resolveDepthConfig,
   getCycleViolations,
   DEFAULT_MAX_DEPTH,
+  buildTmuxLaunchEnv,
 } from "../subagent.js";
 
 describe("extractFinalOutput", () => {
@@ -182,6 +183,20 @@ describe("resolveDepthConfig", () => {
     expect(config.canDelegate).toBe(true);
     expect(config.ancestorStack).toEqual(["root", "worker"]);
     expect(config.preventCycles).toBe(false);
+  });
+});
+
+describe("buildTmuxLaunchEnv", () => {
+  it("should preserve explicit microcompaction opt-in for tmux workers", () => {
+    const env = buildTmuxLaunchEnv({
+      PI_AGENTIC_MICROCOMPACTION: "1",
+      PI_TEAM_WORKER: "1",
+      GITHUB_TOKEN: "secret",
+    });
+
+    expect(env.PI_AGENTIC_MICROCOMPACTION).toBe("1");
+    expect(env.PI_TEAM_WORKER).toBe("1");
+    expect(env.GITHUB_TOKEN).toBeUndefined();
   });
 });
 

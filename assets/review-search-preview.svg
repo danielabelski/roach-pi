@@ -1,0 +1,41 @@
+<svg width="1080" height="520" viewBox="0 0 1080 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">ROACH PI review and search preview</title>
+  <desc id="desc">A terminal-style preview of ultrareview agents, FFF search, LSP diagnostics, and workspace memory.</desc>
+  <rect width="1080" height="520" rx="28" fill="#09090B"/>
+  <rect x="38" y="36" width="1004" height="448" rx="24" fill="#101827" stroke="#334155"/>
+  <text x="74" y="92" fill="#F8FAFC" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="34" font-weight="800">Deep review + code intelligence in one session</text>
+  <text x="74" y="126" fill="#94A3B8" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="18">Dispatch reviewers, dedupe findings, search with FFF, and verify symbols with LSP before you ship.</text>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">
+    <g transform="translate(74 174)">
+      <rect width="286" height="244" rx="18" fill="#020617" stroke="#A78BFA"/>
+      <text x="22" y="36" fill="#C4B5FD">/ultrareview</text>
+      <text x="22" y="70" fill="#CBD5E1">reviewer-bug ×2</text>
+      <text x="22" y="100" fill="#CBD5E1">reviewer-security ×2</text>
+      <text x="22" y="130" fill="#CBD5E1">reviewer-performance ×2</text>
+      <text x="22" y="160" fill="#CBD5E1">reviewer-test-coverage ×2</text>
+      <text x="22" y="190" fill="#CBD5E1">reviewer-consistency ×2</text>
+      <text x="22" y="222" fill="#34D399">verifier → review report</text>
+    </g>
+    <g transform="translate(397 174)">
+      <rect width="286" height="244" rx="18" fill="#020617" stroke="#22D3EE"/>
+      <text x="22" y="36" fill="#67E8F9">FFF search</text>
+      <text x="22" y="72" fill="#CBD5E1">find("plan progress")</text>
+      <text x="22" y="102" fill="#CBD5E1">grep("registerCommand")</text>
+      <text x="22" y="132" fill="#CBD5E1">multi_grep([...])</text>
+      <text x="22" y="170" fill="#94A3B8">git-aware ranking</text>
+      <text x="22" y="200" fill="#94A3B8">@ autocomplete override</text>
+      <text x="22" y="226" fill="#94A3B8">fallback-safe</text>
+    </g>
+    <g transform="translate(720 174)">
+      <rect width="286" height="244" rx="18" fill="#020617" stroke="#34D399"/>
+      <text x="22" y="36" fill="#86EFAC">LSP + memory</text>
+      <text x="22" y="72" fill="#CBD5E1">lsp_diagnostics</text>
+      <text x="22" y="102" fill="#CBD5E1">lsp_rename</text>
+      <text x="22" y="132" fill="#CBD5E1">lsp_find_references</text>
+      <text x="22" y="170" fill="#FDE68A">memory_save</text>
+      <text x="22" y="200" fill="#94A3B8">recall decisions</text>
+      <text x="22" y="226" fill="#94A3B8">avoid repeat bugs</text>
+    </g>
+  </g>
+</svg>

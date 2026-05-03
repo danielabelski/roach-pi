@@ -77,7 +77,7 @@ describe("microcompactMessages", () => {
   const oldTimestamp = now - MICROCOMPACT_AGE_MS - 1000;
   const recentTimestamp = now - 1000;
 
-  it("should truncate old tool results", () => {
+  it("should truncate old tool results with a stable marker", () => {
     const messages: any[] = [
       {
         role: "toolResult",
@@ -89,7 +89,10 @@ describe("microcompactMessages", () => {
       },
     ];
     const result = microcompactMessages(messages, now);
-    expect(result[0].content[0].text).toContain("[Compacted]");
+    const laterResult = microcompactMessages(messages, now + 60 * 1000);
+    expect(result[0].content[0].text).toBe("[Compacted] bash result");
+    expect(laterResult[0].content[0].text).toBe(result[0].content[0].text);
+    expect(result[0].content[0].text).not.toContain("min ago");
     expect(result[0].content[0].text.length).toBeLessThan(500);
   });
 

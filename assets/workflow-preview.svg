@@ -1,0 +1,58 @@
+<svg width="1080" height="520" viewBox="0 0 1080 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">ROACH PI workflow preview</title>
+  <desc id="desc">A terminal-style workflow preview showing clarification, planning, implementation, validation, and review phases.</desc>
+  <rect width="1080" height="520" rx="28" fill="#0B1020"/>
+  <rect x="34" y="32" width="1012" height="456" rx="22" fill="#111827" stroke="#334155"/>
+  <rect x="34" y="32" width="1012" height="52" rx="22" fill="#1E293B"/>
+  <circle cx="70" cy="58" r="7" fill="#EF4444"/>
+  <circle cx="94" cy="58" r="7" fill="#F59E0B"/>
+  <circle cx="118" cy="58" r="7" fill="#22C55E"/>
+  <text x="150" y="65" fill="#CBD5E1" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16">agentic workflow</text>
+
+  <g font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+    <text x="72" y="140" fill="#F8FAFC" font-size="34" font-weight="800">From fuzzy idea to verified implementation</text>
+    <text x="72" y="178" fill="#94A3B8" font-size="18">One focused question at a time, codebase exploration in parallel, then a plan-worker → validator execution loop.</text>
+  </g>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16">
+    <g transform="translate(78 235)">
+      <rect width="166" height="92" rx="18" fill="#0F172A" stroke="#22D3EE"/>
+      <text x="24" y="38" fill="#67E8F9">/clarify</text>
+      <text x="24" y="66" fill="#94A3B8">Context Brief</text>
+    </g>
+    <path d="M260 281H340" stroke="#64748B" stroke-width="2" marker-end="url(#arrow)"/>
+    <g transform="translate(356 235)">
+      <rect width="166" height="92" rx="18" fill="#0F172A" stroke="#A78BFA"/>
+      <text x="24" y="38" fill="#C4B5FD">/plan</text>
+      <text x="24" y="66" fill="#94A3B8">Task plan</text>
+    </g>
+    <path d="M538 281H618" stroke="#64748B" stroke-width="2" marker-end="url(#arrow)"/>
+    <g transform="translate(634 235)">
+      <rect width="166" height="92" rx="18" fill="#0F172A" stroke="#F97316"/>
+      <text x="24" y="38" fill="#FDBA74">plan-worker</text>
+      <text x="24" y="66" fill="#94A3B8">implements</text>
+    </g>
+    <path d="M816 281H896" stroke="#64748B" stroke-width="2" marker-end="url(#arrow)"/>
+    <g transform="translate(912 235)">
+      <rect width="92" height="92" rx="18" fill="#0F172A" stroke="#34D399"/>
+      <text x="18" y="38" fill="#86EFAC">PASS</text>
+      <text x="18" y="66" fill="#94A3B8">verify</text>
+    </g>
+  </g>
+
+  <g transform="translate(78 372)" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">
+    <rect width="926" height="74" rx="16" fill="#020617" stroke="#1E293B"/>
+    <text x="22" y="32" fill="#94A3B8">footer</text>
+    <text x="88" y="32" fill="#38BDF8">cache 92%</text>
+    <text x="198" y="32" fill="#A78BFA">ctx 34%</text>
+    <text x="294" y="32" fill="#F59E0B">plan 3/6</text>
+    <text x="398" y="32" fill="#22C55E">subagent: running</text>
+    <text x="22" y="56" fill="#64748B">progress snapshots survive replay; validators check each plan task under an information barrier</text>
+  </g>
+
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L8 4L0 8V0Z" fill="#64748B"/>
+    </marker>
+  </defs>
+</svg>

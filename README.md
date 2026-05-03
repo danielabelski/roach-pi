@@ -1,368 +1,428 @@
-# Pi Engineering Discipline Extension
+<p align="center">
+  <img src="assets/hero.svg" alt="ROACH PI — engineering discipline for pi" width="100%">
+</p>
 
-An advanced extension for the [pi coding agent](https://github.com/badlogic/pi-mono), designed to bring strict engineering discipline and agentic orchestration to your workflow.
+<p align="center">
+  <strong>Engineering discipline, agentic orchestration, and power-user tools for the pi coding agent.</strong>
+</p>
 
-The agent dynamically generates questions, selects reviewers, and drives workflow phases autonomously — no hardcoded templates or fixed question sets.
+<p align="center">
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/changelog-keep-22C55E?style=flat&colorA=111827" alt="Changelog"></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/license-MIT-58A6FF?style=flat&colorA=111827" alt="MIT license"></a>
+  <a href="https://github.com/badlogic/pi-mono"><img src="https://img.shields.io/badge/pi-0.72.x-A78BFA?style=flat&colorA=111827" alt="pi 0.72.x"></a>
+  <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat&colorA=111827&logo=typescript&logoColor=white" alt="TypeScript"></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/search-FFF-F97316?style=flat&colorA=111827" alt="FFF search"></a>
+</p>
+
+<p align="center">
+  Built on <a href="https://github.com/badlogic/pi-mono">pi</a>. Focused on transparent prompts, verifiable execution, subagents, code review, memory, LSP, and fast search.
+</p>
+
+---
+
+## Table of Contents
+
+- [What is ROACH PI?](#what-is-roach-pi)
+- [Highlights](#highlights)
+- [Installation](#installation)
+- [First 15 Minutes](#first-15-minutes)
+- [Feature Tour](#feature-tour)
+- [Commands](#commands)
+- [Tools](#tools)
+- [Configuration](#configuration)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
+
+## What is ROACH PI?
+
+ROACH PI is an extension suite for the pi coding agent. It turns a normal coding session into a disciplined engineering loop:
+
+1. clarify ambiguous requests with focused questions,
+2. turn the clarified goal into an executable plan,
+3. dispatch specialized subagents to implement and verify work,
+4. run deep review pipelines before merging,
+5. preserve hard-won lessons in workspace memory.
+
+It is intentionally inspectable: commands, tools, hooks, agents, and skills are plain TypeScript and Markdown in this repository.
+
+## Highlights
+
+### Agentic workflow discipline
+
+- `/clarify` asks one context-aware question at a time and explores the codebase in parallel.
+- `/plan` turns the clarified scope into a concrete implementation plan.
+- Plan execution uses a compliance → worker → validator loop, so implementation and verification stay separated.
+- Progress snapshots and footer status make long-running plans easier to recover and audit.
+
+### Subagents and review fleets
+
+- `subagent` runs specialized pi subprocesses in single, parallel, or chain mode.
+- Async subagents can run in the background and be inspected or interrupted later.
+- `/ultrareview` dispatches 10 independent reviewers, then verifies and synthesizes the findings.
+- Optional team mode can coordinate bounded worker batches with durable run state and tmux-backed panes.
+
+### Faster navigation and safer edits
+
+- FFF-backed `find`, `grep`, and `multi_grep` replace default search with git-aware ranking; `grep` and `multi_grep` also support pagination.
+- Bundled LSP tools provide diagnostics, definitions, references, symbols, and workspace rename.
+- Nested `AGENTS.md` injection gives the model local directory rules when it reads files.
+- Sandboxed bash approval can block or ask before sensitive shell execution.
+
+### Memory and autonomous operations
+
+- Workspace memory recalls prior decisions, bug fixes, and lessons in future related sessions.
+- `/loop` schedules recurring prompts such as health checks or status monitoring.
+- Experimental autonomous-dev mode can poll labeled GitHub issues and work them through an agentic pipeline.
+
+<p align="center">
+  <img src="assets/workflow-preview.svg" alt="ROACH PI workflow preview" width="86%">
+</p>
 
 ## Installation
 
 ```bash
-pi install git:github.com/tmdgusya/pi-engineering-discipline-extension
+pi install git:github.com/tmdgusya/roach-pi
 ```
 
-## Setup (Required)
-
-> **After installing, run `/setup` first.** This is not optional.
+Restart `pi`, then run setup once:
 
 ```bash
 /setup
 ```
 
-`/setup` configures `quietStartup: true` in `~/.pi/agent/settings.json` so the extension's custom ROACH PI banner replaces the default startup listing. Without this, you'll see redundant startup output.
+`/setup` writes `quietStartup: true` to `~/.pi/agent/settings.json` so ROACH PI can own the startup banner instead of duplicating pi's default extension listing.
 
-> ⚠️ **If you have the `superpowers` skill installed, remove it before using this extension.** The `superpowers` skill conflicts with this extension's bundled skills (e.g., `agentic-clarification`, `agentic-plan-crafting`, `agentic-karpathy`). Duplicate skill names can cause unexpected behavior since skill loading does not guarantee extension override.
+> [!WARNING]
+> If you have the `superpowers` skill installed, remove it before using ROACH PI. It can define skill names that collide with this extension's bundled skills, and pi does not guarantee extension override order for duplicate skills.
 
-## Why ROACH PI?
+## First 15 Minutes
 
-- **Fully open source** — Every line is on GitHub. No hidden prompts, no secret system instructions, no obfuscated behavior. Read the [source](https://github.com/tmdgusya/roach-pi) and see exactly what the agent does.
-- **Observable** — The footer displays prompt cache hit rate in real time. See how your context is being utilized, session by session.
-- **Transparent by design** — Tools, event hooks, skill injections, and agent prompts are all plain TypeScript and Markdown. No magic.
-
-## Features
-
-### Commands
-- **`/setup`**: **Run this first.** Configures `quietStartup: true` and sets up the ROACH PI banner.
-- **`/clarify`**: The agent asks dynamic, context-aware questions one at a time to resolve ambiguity. It generates questions and choices on the fly based on your request, while exploring the codebase via subagents in parallel. Ends with a structured Context Brief.
-- **`/plan`**: Delegates to the agent in strict agentic-plan-crafting mode, ensuring executable implementation plans with no placeholders.
-- **`/ultraplan`**: The agent dispatches all 5 reviewer perspectives (Feasibility, Architecture, Risk, Dependency, User Value) in parallel via the subagent tool, then synthesizes findings into a milestone DAG.
-- **`/review [target]`**: Single-pass code review of current changes across 5 dimensions (bugs, security, performance, test coverage, consistency). No subagents — the current agent reads the diff and produces an integrated review directly. Target is optional; if omitted, auto-detects PR or local diff vs `main`.
-- **`/ultrareview [target]`**: Deep 3-stage code review pipeline. Stage 1 dispatches 10 subagents in parallel (5 reviewer roles × 2 seeds). Stage 2 runs `reviewer-verifier` to dedupe findings and filter false positives. Stage 3 runs `review-synthesis` to produce the final structured report, saved to `docs/engineering-discipline/reviews/YYYY-MM-DD-<topic>-review.md` with a summary streamed to chat. Mirrors claude-code's `bughunter` pipeline locally (no cloud teleport).
-- **`/ask`**: Manual test command for the `ask_user_question` tool.
-- **`/reset-phase`**: Resets the workflow phase to idle.
-- **`/loop <interval> <prompt>`**: Schedule a recurring prompt at fixed intervals (`5s`, `10m`, `2h`, `1d`). Cron-style — fires on schedule regardless of execution state.
-- **`/loop-stop [job-id]`**: Stop a specific loop job. Interactive selector if no ID given.
-- **`/loop-list`**: List all active loop jobs with run counts, error counts, and timing.
-- **`/loop-stop-all`**: Stop all active loop jobs (with confirmation).
-- **`/fff-mode both|tools-only`**: Switch FFF integration mode. `both` overrides search tools and `@` autocomplete. `tools-only` keeps only the tool overrides.
-- **`/fff-health`**: Show FFF engine status, indexed file count, git detection, and frecency/query tracker health.
-- **`/fff-rescan`**: Trigger an explicit FFF file rescan for the current working tree.
-
-### Tools
-- **`ask_user_question`**: The agent calls this autonomously whenever it encounters ambiguity — generating questions and choices dynamically based on context.
-- **`subagent`**: Delegates tasks to specialized agents running as separate `pi` processes. Supports three execution modes:
-  - **Single**: One-off investigation or exploration tasks
-  - **Parallel**: Dispatch multiple independent agents concurrently (max 12 tasks, 10 concurrent)
-  - **Chain**: Sequential pipeline where each step uses `{previous}` to reference prior output
-- **FFF-backed search overrides**:
-  - **`find`** → FFF fuzzy file search with ranking and git-aware indexing
-  - **`grep`** → FFF content search with pagination and smart-case behavior
-  - **`multi_grep`** → multi-pattern OR search through the FFF engine
-
-### Parsers
-
-The agentic harness includes small, dependency-free parsers for the two file formats it consumes during orchestration.
-
-#### Agent frontmatter parser
-
-Agent definitions are Markdown files with YAML-like frontmatter followed by the system prompt body. Put user agents in `~/.pi/agent/agents/*.md`; put project-local agents in `.pi/agents/*.md`.
-
-```markdown
----
-name: explorer
-description: Fast codebase exploration and investigation
-tools: read, grep, find
-maxOutput: 12000
-maxSubagentDepth: 2
-context: fresh
-worktree: false
----
-You are a focused exploration agent. Read the codebase and report concise findings.
-```
-
-How to use it:
+Try the disciplined path on a real task:
 
 ```text
-Use the `subagent` tool with `agent: "explorer"`, or set `agentScope: "user"`, `"project"`, or `"both"` to control which agent directories are searched.
+/clarify Add a feature that exports review results as Markdown
 ```
 
-Supported fields:
+After the context brief is clear:
 
-| Field | Example | Effect |
-|---|---|---|
-| `name` | `explorer` | Required agent identifier used by the `subagent` tool |
-| `description` | `Fast codebase exploration` | Required description shown to the parent agent |
-| `tools` | `read, grep, find` or `[read, grep, find]` | Optional tool allowlist |
-| `model` | `default` | Optional provider/model hint for the spawned agent |
-| `maxOutput` | `12000` | Optional positive integer truncation limit |
-| `maxSubagentDepth` | `2` | Optional positive integer depth limit for nested subagents |
-| `output` | `reports/explorer.md` | Optional default artifact output path |
-| `reads` / `defaultReads` | `src/index.ts, README.md` | Optional default files provided as read context |
-| `progress` / `defaultProgress` | `reports/progress.md` | Optional progress artifact path |
-| `context` | `fresh` or `fork` | Optional session context mode |
-| `worktree` | `true` or `false` | Optional git worktree isolation default |
-
-Parser notes:
-
-- Values may be quoted when they contain `#` or punctuation.
-- Inline comments are ignored outside quotes.
-- Comma-separated arrays can be written with or without brackets.
-- Invalid optional numbers, booleans, or context values are ignored instead of failing discovery.
-
-#### Plan markdown parser
-
-`plan-validator` uses a plan-file parser to build an isolated validation prompt from one task in a written implementation plan. You normally use it through the `subagent` tool, not by calling the parser directly.
-
-```ts
-await subagent({
-  agent: "plan-validator",
-  task: "validate",
-  planFile: "docs/engineering-discipline/plans/feature-plan.md",
-  planTaskId: 3,
-});
+```text
+/plan
 ```
 
-The parser expects plans with this shape:
+Then ask the agent to run the plan. The intended execution pattern is:
 
-```markdown
-# Implementation Plan
-
-**Goal:** Build a feature
-
-## Verification Strategy
-
-**Command:** `npm test`
-
-### Task 3: Wire command handler
-
-**Dependencies:** Runs after Task 2 completes
-
-Modify: `src/commands.ts`
-Test: `tests/commands.test.ts`
-
-- [ ] **Step 1:** Add the handler.
-- [ ] **Step 2:** Register it.
-
-Run: `npm test -- tests/commands.test.ts`
-Expected: command tests pass
+```text
+plan-compliance → plan-worker → plan-validator
 ```
 
-What gets extracted:
+Before merging non-trivial changes, run one of the review commands:
 
-| Plan element | Used for |
-|---|---|
-| `**Goal:** ...` | Overall plan context |
-| `**Command:** \`...\`` | Final verification command |
-| `### Task N: ...` | Task ID and task name |
-| `### Task N (Final): ...` | Marks final verification tasks |
-| `**Dependencies:** ...` | Dependency context for validation |
-| `Create:` / `Modify:` / `Test:` file lines | Files the validator should inspect |
-| `Run:` + following `Expected:` | Task-specific verification criteria |
-| `- [ ] **Step 1:** ...` and following steps | Task execution details |
-
-### FFF Search Engine
-
-ROACH PI now includes an embedded FFF-powered search extension under `extensions/fff-search`.
-
-What it changes:
-- replaces the built-in `find` and `grep` tools with FFF-backed implementations
-- adds `multi_grep` for multi-pattern OR search
-- stores frecency and query history under `~/.pi/agent/fff/`
-- initializes a native `FileFinder` instance at session start for the current working directory
-- falls back to built-in `find` / `grep` behavior if the native FFF layer is unavailable or fails to initialize for the current workspace
-
-Operational modes:
-- **`both`** — override tools and replace `@` file autocomplete suggestions
-- **`tools-only`** — override tools only, keep pi's default autocomplete
-
-### Code Review (`/review` and `/ultrareview`)
-
-Both commands accept the same three target forms. The target argument is validated against a safe-character allowlist (`a–z`, `A–Z`, `0–9`, `.`, `-`, `_`, `/`, `:`) before being interpolated into any shell command — shell metacharacters (`;`, `|`, `&`, `$`, backticks, quotes, whitespace, etc.) are rejected with a clear error.
-
-**Input forms:**
-
-```bash
-# No argument — auto-detect. If the current branch has an open PR,
-# uses `gh pr diff <number>`. Otherwise falls back to
-# `git diff main...HEAD` plus uncommitted changes.
+```text
 /review
 /ultrareview
-
-# PR number — fetched via `gh pr diff <number>`.
-/review 27
-/ultrareview 27
-
-# PR URL — the full GitHub URL works the same as a number, because
-# `gh pr diff` accepts both interchangeably.
-/review https://github.com/tmdgusya/roach-pi/pull/27
-/ultrareview https://github.com/tmdgusya/roach-pi/pull/27
-
-# Branch name — diffed against main with `git diff main...<branch>`.
-/review feature/add-auth-flow
-/ultrareview feature/add-auth-flow
 ```
 
-**When to use which:**
+Use the quick system checks when you need visibility:
 
-- **`/review`** — quick sanity check. No confirmation dialog, no file saved, a single integrated review is streamed to chat. Good for iterating on a PR before requesting a deeper pass.
-- **`/ultrareview`** — deep review. Asks for confirmation before dispatching 10 subagents (this takes several minutes). The final report is saved under `docs/engineering-discipline/reviews/` and a top-5 summary is streamed to chat. Use before merging non-trivial changes.
-
-**Rejected inputs:**
-
-```bash
-/review 27; rm -rf /            # rejected: contains `;` and whitespace
-/review "27"                    # rejected: contains double quotes
-/review $(whoami)               # rejected: contains `$` and `(`/`)`
+```text
+/fff-health
+/lsp status
+/memory stats
 ```
 
-These all produce an `Invalid review target` error notification and no prompt is dispatched. For `/ultrareview`, validation runs **before** the confirmation dialog so you are never asked to confirm a run that would fail.
+## Feature Tour
 
-### Session Loop
+### 1. Clarification and planning
 
-A session-scoped job scheduler for recurring tasks. Up to 100 concurrent jobs with per-job error isolation, `AbortController`-based cooperative cancellation, and automatic cleanup on session shutdown.
+ROACH PI is built around the idea that vague requests should not become vague code. `/clarify` forces ambiguity into the open before implementation starts. It asks one focused question, offers concrete choices when useful, and explores relevant files with an `explorer` subagent in parallel.
 
-```bash
-# Check git status every 5 minutes
+The output is a Context Brief. `/plan` then converts that brief into a task-by-task implementation plan with explicit files, steps, verification commands, and success criteria.
+
+### 2. Subagent orchestration
+
+The `subagent` tool delegates work to specialized agents running as separate `pi` processes.
+
+Supported modes:
+
+| Mode | Use it for |
+|---|---|
+| Single | One focused investigation or execution task. |
+| Parallel | Independent reviewers, explorers, or workers. |
+| Chain | Sequential pipelines where each step consumes the previous output. |
+| Async | Background tasks that can be checked or interrupted by run id. |
+
+Bundled agents include `explorer`, `planner`, `worker`, `plan-compliance`, `plan-worker`, `plan-validator`, reviewer agents for feasibility/architecture/risk/dependency/user value, and review agents for bugs/security/performance/test coverage/consistency.
+
+### 3. Review pipelines
+
+`/review` is a quick integrated review of a PR, branch, or local diff. `/ultrareview` is the deep pass:
+
+1. resolve the diff once,
+2. dispatch 10 reviewers in parallel,
+3. run `reviewer-verifier` to dedupe and filter false positives,
+4. run `review-synthesis`,
+5. save the final report under `docs/engineering-discipline/reviews/`.
+
+<p align="center">
+  <img src="assets/review-search-preview.svg" alt="ROACH PI review, FFF, LSP, and memory preview" width="86%">
+</p>
+
+### 4. FFF search
+
+The bundled FFF extension upgrades pi's file and content search:
+
+- `find` fuzzy-searches file names with frecency and git-aware ranking.
+- `grep` searches content with pagination and smart-case behavior.
+- `multi_grep` searches multiple literal patterns in one pass.
+- `@` file autocomplete can be replaced with FFF suggestions in `both` mode.
+
+### 5. LSP code intelligence
+
+The bundled `pi-lsp-client` extension adds IDE-like operations:
+
+- `lsp_diagnostics`
+- `lsp_goto_definition`
+- `lsp_find_references`
+- `lsp_symbols`
+- `lsp_prepare_rename`
+- `lsp_rename`
+
+It supports 40+ language server configs and provides `/lsp`, `/lsp status`, `/lsp install <serverId>`, and `/lsp warmup <serverId>`.
+
+### 6. Workspace memory
+
+Workspace memory stores important findings as structured records under pi's agent directory, scoped by workspace. It can recall relevant records into future sessions and exposes:
+
+```text
+/memory list
+/memory show <id>
+/memory save <text>
+/memory delete <id>
+/memory search <query>
+/memory stats
+```
+
+The LLM-callable `memory_save` tool is used after bug fixes, decisions, or useful discoveries.
+
+### 7. Session loop
+
+`/loop` schedules recurring prompts inside the current session:
+
+```text
 /loop 5m check git status and report changes
-
-# Monitor dev server every 30 seconds
 /loop 30s verify the dev server is running on port 3000
-
-# View active jobs
 /loop-list
-
-# Stop all jobs
 /loop-stop-all
 ```
 
-Key properties:
-- **Session-scoped**: Jobs are automatically cleaned up when the session ends. No persistence.
-- **Error-isolated**: One failing job does not affect others.
-- **Timeout-protected**: Jobs timeout at `max(interval × 2, 60s)` to prevent hangs.
-- **Queue-safe**: Uses `deliverAs: 'followUp'` so loop prompts queue correctly even during active agent turns.
+Jobs are session-scoped, error-isolated, timeout-protected, and cleaned up on shutdown.
 
-### Autonomous Dev Engine (Experimental)
+### 8. Autonomous dev engine experimental
 
-An autonomous GitHub issue processing engine that polls issues labeled `autonomous-dev:ready`, implements them using the agentic pipeline, and creates pull requests.
-
-> ⚠️ **Experimental** — Requires `PI_AUTONOMOUS_DEV=1` environment variable.
+Set `PI_AUTONOMOUS_DEV=1` to enable `/autonomous-dev`:
 
 ```bash
 export PI_AUTONOMOUS_DEV=1
+pi
 ```
 
-The engine runs inside the TUI and exposes a compact persistent HUD in the footer and a below-editor widget so you can see:
-- current engine state
-- current activity
-- recent worker activity history
-- active issue context
-- whether a worker/subagent is actively running
+```text
+/autonomous-dev start owner/repo
+/autonomous-dev status
+/autonomous-dev poll
+/autonomous-dev stop
+```
 
-Busy worker activity is shown as a green indicator, idle polling/tracking is orange, and stopped is red.
+The engine polls issues labeled `autonomous-dev:ready`, tracks progress in the footer/widget, asks for clarification when needed, and uses existing agents to implement work.
 
-#### Label Protocol
+### 9. Nested `AGENTS.md`
 
-| Label | Meaning |
-|-------|---------|  
-| `autonomous-dev:ready` | Issue queued for processing |
-| `autonomous-dev:in-progress` | Being implemented |
-| `autonomous-dev:needs-clarification` | Awaiting author response |
-| `autonomous-dev:completed` | PR created |
-| `autonomous-dev:failed` | Could not complete |
+The bundled nested-agents extension injects nearby directory-level `AGENTS.md` files whenever the agent reads a file. This lets each subtree carry local conventions without forcing you to paste them into every prompt.
 
-#### Commands
+```text
+/nested-agents
+pi --no-nested-agents
+```
 
-- **`/autonomous-dev start [repo]`** — Start the engine. Prefer an explicit full GitHub repo slug like `owner/repo` (for example `tmdgusya/roach-pi`). If omitted, the engine tries to detect the current directory's GitHub remote.
-- **`/autonomous-dev stop`** — Stop the engine and abort in-flight autonomous worker execution for the current session.
-- **`/autonomous-dev status`** — Show current status, including recent activity, last poll/error timestamps, active worker count, and log file path.
-- **`/autonomous-dev poll`** — Trigger one poll cycle
+## Commands
 
-Example:
+### Workflow
+
+| Command | Description |
+|---|---|
+| `/clarify [topic]` | Resolve ambiguity with dynamic questions and parallel exploration. |
+| `/plan [topic]` | Create an executable implementation plan. |
+| `/ultraplan [topic]` | Break complex work into milestones using five planning reviewers. |
+| `/reset-phase` | Clear active clarify/plan/ultraplan state. |
+
+### Review
+
+| Command | Description |
+|---|---|
+| `/review [target]` | Quick single-pass review. Target can be omitted, PR number, PR URL, or branch. |
+| `/ultrareview [target]` | Deep 10-reviewer pipeline with verifier and synthesis report. |
+
+### Search, LSP, memory, and loops
+
+| Command | Description |
+|---|---|
+| `/fff-mode both\|tools-only` | Choose whether FFF powers both tools and `@` autocomplete or tools only. |
+| `/fff-health` | Show FFF native engine, index, git, and frecency status. |
+| `/fff-rescan` | Trigger an explicit FFF rescan. |
+| `/lsp` | Open the LSP server inspector. |
+| `/lsp status` | Print installed/available language server summary. |
+| `/lsp install <serverId>` | Run a whitelisted install recipe or show a manual hint. |
+| `/lsp warmup <serverId>` | Preload a language server for the workspace. |
+| `/memory ...` | Manage workspace memories. |
+| `/loop <interval> <prompt>` | Schedule recurring prompts. |
+| `/loop-list` | List active loop jobs. |
+| `/loop-stop [job-id]` | Stop one loop job. |
+| `/loop-stop-all` | Stop all loop jobs. |
+
+### Setup and experimental modes
+
+| Command | Description |
+|---|---|
+| `/setup` / `/init` | Configure recommended settings, currently `quietStartup: true`. |
+| `/team ...` | Optional bounded team runner. Requires `PI_ENABLE_TEAM_MODE=1`. |
+| `/autonomous-dev ...` | Experimental GitHub issue engine. Requires `PI_AUTONOMOUS_DEV=1`. |
+| `/nested-agents` | Toggle nested `AGENTS.md` context widget. |
+| `/ask` | Manual smoke test for `ask_user_question`. |
+
+## Tools
+
+| Tool | What it does |
+|---|---|
+| `ask_user_question` | Lets the agent ask focused multiple-choice or free-text clarification questions. |
+| `subagent` | Runs specialized agents in single, parallel, chain, or async modes. |
+| `webfetch` | Fetches web pages and converts them to Markdown with caching. |
+| `bash` | Sandboxed shell execution with optional approval policy. |
+| `find` | FFF-backed fuzzy file search. |
+| `grep` | FFF-backed content search with pagination. |
+| `multi_grep` | Multi-pattern OR content search. |
+| `memory_save` | Saves structured workspace memories. |
+| `team` | Optional team orchestration tool gated by `PI_ENABLE_TEAM_MODE=1`. |
+| `lsp_*` | Diagnostics, definitions, references, symbols, and rename. |
+
+## Configuration
+
+### Recommended startup
+
+```jsonc
+// ~/.pi/agent/settings.json
+{
+  "quietStartup": true
+}
+```
+
+`/setup` writes this for you.
+
+### FFF search mode
 
 ```bash
-/autonomous-dev start tmdgusya/roach-pi
+PI_FFF_MODE=both pi          # tools + @ autocomplete
+PI_FFF_MODE=tools-only pi    # tools only
 ```
 
-#### Runtime Notes
+Or change it live:
 
-- The worker reuses the active session's model/provider configuration. If the current session is not authenticated for its selected provider, `/autonomous-dev start` may fail during worker preflight or worker launch.
-- The engine writes structured JSONL logs to `~/.pi/autonomous-dev.log` by default. Override with `PI_AUTONOMOUS_DEV_LOG_PATH` if needed.
-- Poll discovery and GitHub integration are observable through `/autonomous-dev status` and the log file.
-
-#### Tools
-
-- **`gh_issue_list`** — List issues with optional label filter
-- **`gh_issue_read`** — Read an issue with all comments
-- **`gh_issue_comment`** — Post a comment on an issue
-- **`gh_label`** — Add or remove labels
-- **`gh_pr_create`** — Create a pull request
-
-### Event Handlers
-- **`resources_discover`**: Registers `~/engineering-discipline/skills/` so the agent has access to agentic-clarification, agentic-plan-crafting, and agentic-milestone-planning skill rules.
-  - Compatibility mode (default): skills are merged with existing discovered skills.
-  - If duplicate skill names exist, the first discovered skill is kept (extension override is not guaranteed).
-- **`before_agent_start`**: Injects workflow phase guidance into the system prompt so the agent stays on track during `/clarify`, `/plan`, or `/ultraplan` sessions.
-
-## Subagent System
-
-The extension includes a built-in subagent system that spawns `pi` CLI subprocesses (`pi --mode json -p --no-session`).
-
-### Agent Discovery
-
-Agents are `.md` files with YAML frontmatter:
-
-```markdown
----
-name: scout
-description: Fast reconnaissance agent
-model: haiku
-tools: read,glob,grep
----
-You are a fast scout agent. Explore the codebase quickly and report key findings.
+```text
+/fff-mode both
+/fff-mode tools-only
 ```
 
-Agent locations:
-- **User agents**: `~/.pi/agent/agents/*.md`
-- **Project agents**: `.pi/agents/*.md` (overrides user agents of the same name)
+### Team mode
 
-## Observability
+```bash
+PI_ENABLE_TEAM_MODE=1 pi
+```
 
-The footer displays real-time metrics during every session:
+Team mode is disabled by default. It exposes the `team` tool and makes `/team` functional.
 
-- **Cache hit rate** — prompt cache utilization per session
-- **Context usage bar** — how much of the context window is used
-- **Active tools** — which tools are currently running
-- **Branch, model, directory** — at a glance
+### Autonomous dev
 
-Everything the agent does is inspectable. No hidden behavior.
+```bash
+PI_AUTONOMOUS_DEV=1 pi
+PI_AUTONOMOUS_DEV_LOG_PATH=~/.pi/autonomous-dev.log pi
+```
+
+### Sandboxed bash approval
+
+```bash
+PI_SANDBOX_APPROVAL_MODE=ask pi      # ask before escalation
+PI_SANDBOX_APPROVAL_MODE=always pi   # approve automatically
+PI_SANDBOX_APPROVAL_MODE=deny pi     # block escalation
+```
+
+### LSP configuration
+
+Create project-local `.pi/lsp-client.json` or user-global `~/.pi/lsp-client.json`:
+
+```jsonc
+{
+  "lsp": {
+    "my-server": {
+      "command": ["my-lsp", "--stdio"],
+      "extensions": [".myext"]
+    }
+  }
+}
+```
+
+## Repository Layout
+
+```text
+extensions/
+  agentic-harness/     # workflows, subagents, review, team, webfetch, footer
+  fff-search/          # FFF-backed find/grep/multi_grep and @ autocomplete
+  session-loop/        # recurring session prompts
+  workspace-memory/    # save/recall workspace memory
+  autonomous-dev/      # experimental GitHub issue processor
+docs/engineering-discipline/
+  context/             # Context Briefs
+  plans/               # implementation plans
+  reviews/             # review outputs
+assets/                # README visuals
+```
+
+Bundled package dependencies also include `pi-lsp-client` and `@code-yeongyu/pi-nested-agents-md`.
 
 ## Development
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/tmdgusya/pi-engineering-discipline-extension.git ~/.pi/agent/extensions/agentic-harness
-   ```
-2. Install dependencies:
-   ```bash
-   cd ~/.pi/agent/extensions/agentic-harness/extensions/agentic-harness
-   npm install
-   ```
-3. Type `/reload` in the `pi` terminal to apply changes.
-
-## Testing
+Install dependencies in the extension you are changing, then run that extension's tests and type checks. For example:
 
 ```bash
-npm test
+npm --prefix extensions/agentic-harness install
+npm --prefix extensions/agentic-harness test
+npm --prefix extensions/agentic-harness run build
 ```
 
-253 tests covering tool registration, command delegation, event handlers, ask_user_question behavior, agent discovery, subagent execution helpers, concurrency control, autonomous-dev GitHub client, and orchestrator.
+For a broader local sweep, repeat the same pattern per extension:
 
-## Open Source
+```bash
+npm --prefix extensions/agentic-harness test
+npm --prefix extensions/agentic-harness run build
 
-This project is [MIT licensed](https://github.com/tmdgusya/roach-pi/blob/main/LICENSE). Every component — tools, agents, skills, event hooks — is open source and auditable. [Read the source](https://github.com/tmdgusya/roach-pi).
+npm --prefix extensions/fff-search test
+npm --prefix extensions/fff-search run build
+
+npm --prefix extensions/session-loop test
+npm --prefix extensions/session-loop run build
+
+npm --prefix extensions/workspace-memory test
+npm --prefix extensions/workspace-memory run build
+
+npm --prefix extensions/autonomous-dev test
+npm --prefix extensions/autonomous-dev run build
+```
+
+There is no root `npm test` script in `package.json`; use the extension-level commands above.
 
 ## Contributing
 
-Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. **Feature proposals must be discussed on [GitHub Discussions](https://github.com/tmdgusya/roach-pi/discussions) before implementation.**
+See [CONTRIBUTING.md](CONTRIBUTING.md). For larger changes, prefer the same discipline the extension enforces: clarify the goal, write a plan, implement in small steps, and verify with tests or a focused manual check.
 
 ## License
-MIT
+
+MIT. The package metadata in [package.json](package.json) declares the license.

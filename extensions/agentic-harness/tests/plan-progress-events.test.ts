@@ -2,15 +2,18 @@ import { mkdtemp, mkdir, rm, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 import { afterEach, describe, expect, it } from "vitest";
+import { MilestoneTracker } from "../milestone-tracker.js";
 import { PlanProgressTracker } from "../plan-progress.js";
 import {
   completePlanSubagentTasks,
+  extractMilestonePathsFromArgs,
   extractPlanPathsFromArgs,
   getToolExecutionArgs,
   loadPlanFromAssistantMessageEnd,
   loadPlanFromToolResultEvent,
   reconstructPlanProgressFromSessionEntries,
   reloadPlanFromSubagentArgs,
+  startMilestonesFromSubagentArgs,
   startPlanSubagentTasks,
 } from "../plan-progress-events.js";
 
@@ -234,6 +237,65 @@ describe("plan progress event loading", () => {
       tasks: [{ task: "parallel", reads: [PLAN_PATH] }],
       chain: [{ task: `chain reads ${PLAN_PATH}` }],
     })).toEqual([PLAN_PATH]);
+  });
+
+  it("extracts harness milestone paths embedded in subagent task text", () => {
+    const milestonePath = "docs/engineering-discipline/harness/powerline-ui/milestones/M1-footer-status-bridge-powerline-mvp.md";
+
+    expect(extractMilestonePathsFromArgs({
+      agent: "explorer",
+      task: `We are starting M1 for ${milestonePath}. Inspect the codebase.`,
+    })).toEqual([milestonePath]);
+  });
+
+  it("marks referenced milestone as planning when exploratory subagent starts", () => {
+    const milestonePath = "docs/engineering-discipline/harness/powerline-ui/milestones/M1-footer-status-bridge-powerline-mvp.md";
+    const tracker = new MilestoneTracker();
+    tracker.loadMilestones([
+      { id: "M1", name: "Footer Status Bridge Powerline Mvp" },
+      { id: "M2", name: "Footer Presets Ui Settings" },
+    ]);
+
+    const started = startMilestonesFromSubagentArgs(tracker, {
+      agent: "explorer",
+      task: `We are starting M1 for ${milestonePath}. Inspect the codebase.`,
+    });
+
+    expect(started).toEqual(["M1"]);
+    expect(tracker.getMilestone("M1")?.status).toBe("planning");
+    expect(tracker.getMilestone("M2")?.status).toBe("pending");
+  });
+
+  it("only marks the first non-terminal referenced milestone as planning", () => {
+    const m1 = "docs/engineering-discipline/harness/powerline-ui/milestones/M1-footer-status-bridge-powerline-mvp.md";
+    const m2 = "docs/engineering-discipline/harness/powerline-ui/milestones/M2-footer-presets-ui-settings.md";
+    const tracker = new MilestoneTracker();
+    tracker.loadMilestones([
+      { id: "M1", name: "Footer Status Bridge Powerline Mvp" },
+      { id: "M2", name: "Footer Presets Ui Settings" },
+    ]);
+
+    const started = startMilestonesFromSubagentArgs(tracker, {
+      agent: "explorer",
+      task: `Review milestone files ${m1} and ${m2}`,
+    });
+
+    expect(started).toEqual(["M1"]);
+    expect(tracker.getMilestone("M1")?.status).toBe("planning");
+    expect(tracker.getMilestone("M2")?.status).toBe("pending");
+  });
+
+  it("marks referenced milestone as executing for plan-worker subagent", () => {
+    const milestonePath = "docs/engineering-discipline/harness/powerline-ui/milestones/M1-footer-status-bridge-powerline-mvp.md";
+    const tracker = new MilestoneTracker();
+    tracker.loadMilestones([{ id: "M1", name: "Footer Status Bridge Powerline Mvp" }]);
+
+    startMilestonesFromSubagentArgs(tracker, {
+      agent: "plan-worker",
+      task: `Execute ${milestonePath}`,
+    });
+
+    expect(tracker.getMilestone("M1")?.status).toBe("executing");
   });
 
   it("loads plan markdown from finalized assistant message text", async () => {

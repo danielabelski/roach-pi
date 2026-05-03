@@ -8,10 +8,7 @@ export type CompactionPhase =
   | "reviewing"
   | "ultrareviewing";
 
-/** Tool results older than this are truncated during microcompaction (60 min) */
 export const MICROCOMPACT_AGE_MS = 60 * 60 * 1000;
-
-const COMPACTABLE_TOOLS = PI_TOOL_NAME_SET;
 
 export function microcompactMessages<T extends { role: string; timestamp: number; toolName?: string; isError?: boolean; content?: any }>(
   messages: T[],
@@ -20,18 +17,17 @@ export function microcompactMessages<T extends { role: string; timestamp: number
   return messages.map((msg) => {
     if (msg.role !== "toolResult") return msg;
     if (msg.isError) return msg;
-    if (!msg.toolName || !COMPACTABLE_TOOLS.has(msg.toolName)) return msg;
+    if (!msg.toolName || !PI_TOOL_NAME_SET.has(msg.toolName)) return msg;
 
     const age = now - msg.timestamp;
     if (age < MICROCOMPACT_AGE_MS) return msg;
 
-    // Truncate old tool result content
     const content = Array.isArray(msg.content)
       ? msg.content.map((c: any) => {
           if (c.type !== "text") return c;
           return {
             ...c,
-            text: `[Compacted] ${msg.toolName} result, ${Math.round(age / 60000)}min ago`,
+            text: `[Compacted] ${msg.toolName} result`,
           };
         })
       : msg.content;
@@ -199,10 +195,8 @@ Please provide your summary based on the conversation so far, following this str
 export function formatCompactSummary(summary: string): string {
   let formatted = summary;
 
-  // Strip analysis scratchpad
   formatted = formatted.replace(/<analysis>[\s\S]*?<\/analysis>/, "");
 
-  // Extract summary block
   const match = formatted.match(/<summary>([\s\S]*?)<\/summary>/);
   if (match) {
     formatted = formatted.replace(
@@ -211,7 +205,6 @@ export function formatCompactSummary(summary: string): string {
     );
   }
 
-  // Clean extra whitespace
   formatted = formatted.replace(/\n\n+/g, "\n\n");
 
   return formatted.trim();
