@@ -121,7 +121,7 @@ const POWERLINE_COLORS: Record<string, { fg: string; bg: string }> = {
   logo:     { fg: "\x1b[38;2;255;255;255m", bg: "\x1b[48;2;0;175;175m" },
   path:     { fg: "\x1b[38;2;255;255;255m", bg: "\x1b[48;2;0;175;175m" },
   model:    { fg: "\x1b[38;2;255;255;255m", bg: "\x1b[48;2;215;135;175m" },
-  thinking: { fg: "\x1b[38;2;255;255;255m", bg: "\x1b[48;2;150;200;100m" },
+  thinking: { fg: "\x1b[38;2;255;255;255m", bg: "\x1b[48;2;0;135;120m" },
   git:      { fg: "\x1b[38;2;255;255;255m", bg: "\x1b[48;2;200;150;50m" },
   context:  { fg: "\x1b[38;2;255;255;255m", bg: "\x1b[48;2;80;80;80m" },
   dim:      { fg: "\x1b[38;2;255;255;255m", bg: "\x1b[48;2;70;70;70m" },
@@ -137,10 +137,14 @@ function segmentColor(name: string): { fg: string; bg: string } {
   return POWERLINE_COLORS[name] ?? POWERLINE_COLORS.default;
 }
 
+function stripAnsi(text: string): string {
+  return text.replace(/\x1b\[[0-9;]*m/g, "");
+}
+
 function getExtensionStatusText(statuses: ReadonlyMap<string, string>): string | null {
   const parts = [...statuses.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, v]) => v.trim())
+    .map(([, v]) => stripAnsi(v).trim())
     .filter((v) => visibleWidth(v) > 0);
   return parts.length > 0 ? parts.join(" · ") : null;
 }

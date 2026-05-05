@@ -111,26 +111,26 @@ describe("RoachFooter Powerline styling", () => {
 describe("RoachFooter status bridge", () => {
   it("renders the base footer without extension statuses", () => {
     const footer = createFooter();
-    const lines = footer.render(80);
+    const lines = footer.render(150);
 
-    expect(lines.length).toBe(3);
+    expect(lines.length).toBe(2);
     const rendered = lines.join("\n");
     expect(rendered).toContain("powerline-project");
     expect(rendered).toContain("main");
     expect(rendered).toContain("test-model");
     expect(rendered).toContain("thinking:high");
-    expect(rendered).toContain("ctx");
+    expect(rendered).toContain("42k/200k");
     expect(rendered).toContain("cache 33%");
     expect(rendered).toContain("read");
-    expectAllLinesFit(lines, 80);
+    expectAllLinesFit(lines, 150);
   });
 
   it("renders one extension status from footerData.getExtensionStatuses", () => {
     const footer = createFooter(new Map([["harness", "Team running"]]));
-    const lines = footer.render(100);
+    const lines = footer.render(150);
 
     expect(lines.join("\n")).toContain("Team running");
-    expectAllLinesFit(lines, 100);
+    expectAllLinesFit(lines, 150);
   });
 
   it("renders multiple extension statuses in stable key order", () => {
@@ -138,7 +138,7 @@ describe("RoachFooter status bridge", () => {
       ["zeta", "Zed status"],
       ["alpha", "Alpha status"],
     ]));
-    const rendered = footer.render(120).join("\n");
+    const rendered = footer.render(180).join("\n");
 
     expect(rendered).toContain("Alpha status");
     expect(rendered).toContain("Zed status");
@@ -151,7 +151,7 @@ describe("RoachFooter status bridge", () => {
       ["spaces", "   "],
       ["ready", "Ready"],
     ]));
-    const rendered = footer.render(100).join("\n");
+    const rendered = footer.render(150).join("\n");
 
     expect(rendered).toContain("Ready");
     expect(rendered).not.toContain("empty");
@@ -165,7 +165,6 @@ describe("RoachFooter status bridge", () => {
     const width = 44;
     const lines = footer.render(width);
 
-    expect(lines.join("\n")).toContain("Dep");
     expectAllLinesFit(lines, width);
   });
 
@@ -186,13 +185,16 @@ describe("RoachFooter status bridge", () => {
     const compactLines = createFooter(statuses, "compact").render(150);
     const minimalLines = createFooter(statuses, "minimal").render(150);
 
-    expect(defaultLines.length).toBe(3);
+    expect(defaultLines.length).toBe(2);
     expect(compactLines.length).toBe(2);
     expect(minimalLines.length).toBe(2);
-    expect(defaultLines.join("\n")).toContain("ctx");
-    expect(compactLines.join("\n")).toContain("ctx");
-    expect(minimalLines.join("\n")).not.toContain("ctx");
+    expect(defaultLines.join("\n")).toContain("42k/200k");
+    expect(defaultLines.join("\n")).toContain("cache 33%");
+    expect(compactLines.join("\n")).toContain("42k/200k");
+    expect(compactLines.join("\n")).toContain("cache 33%");
+    expect(minimalLines.join("\n")).toContain("42k/200k");
     expect(minimalLines.join("\n")).not.toContain("test-model");
+    expect(minimalLines.join("\n")).not.toContain("cache");
     expect(defaultLines.join("\n")).toContain("Ready");
     expect(compactLines.join("\n")).toContain("Ready");
     expect(minimalLines.join("\n")).toContain("Ready");

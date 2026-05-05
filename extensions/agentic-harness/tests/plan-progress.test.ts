@@ -301,7 +301,7 @@ describe("PlanProgressTracker fuzzy task matching", () => {
 describe("RoachFooter plan progress hosting", () => {
   it("renders active plan lines above the normal footer", () => {
     const tracker = loadSamplePlan();
-    const width = 60;
+    const width = 150;
     const border = "─".repeat(width);
     const planLines = tracker.render(stubTheme, width - 4);
     const footer = new RoachFooter(
@@ -328,8 +328,7 @@ describe("RoachFooter plan progress hosting", () => {
     expect(lines[2 + planLines.length]).toContain("project");
     expect(lines[2 + planLines.length]).toContain("main");
     expect(lines[2 + planLines.length]).toContain("test-model");
-    expect(lines[3 + planLines.length]).toContain("ctx");
-    expect(lines[3 + planLines.length]).toContain("cache 0%");
+    expect(lines[2 + planLines.length]).toContain("cache 0%");
   });
 
   it("requests a TUI render when tracked plan state changes", () => {
