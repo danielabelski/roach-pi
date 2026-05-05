@@ -16,12 +16,7 @@ const ansiTheme = {
   bold: (text: string) => text,
   getFgAnsi: (color: string) => {
     const codes: Record<string, number> = {
-      accent: 33,
-      success: 34,
-      warning: 35,
-      error: 196,
-      dim: 238,
-      text: 15,
+      accent: 33, success: 34, warning: 35, error: 196, dim: 238, text: 15,
     };
     return `\x1b[38;5;${codes[color] ?? 15}m`;
   },
@@ -36,14 +31,23 @@ function footerData(statuses: ReadonlyMap<string, string> = new Map()): Readonly
   };
 }
 
-function createFooter(statuses: ReadonlyMap<string, string> = new Map(), preset: "default" | "compact" | "minimal" = "default"): RoachFooter {
+function createFooter(
+  statuses: ReadonlyMap<string, string> = new Map(),
+  preset: "default" | "compact" | "minimal" = "default",
+  gitStats = { ahead: 0, behind: 0, dirty: 0, untracked: 0 },
+  thinkingLevel: "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | undefined = "high",
+  modelInfo = { name: "test-model", isLatest: false }
+): RoachFooter {
   return new RoachFooter(
     stubTheme,
     footerData(statuses),
     {
       cwd: "/tmp/powerline-project",
-      getModelName: () => "test-model",
+      getModelName: () => modelInfo.name,
       getContextUsage: () => ({ tokens: 42_000, contextWindow: 200_000, percent: 21 }),
+      getGitStats: () => gitStats,
+      getThinkingLevel: () => thinkingLevel,
+      getModelInfo: () => modelInfo,
     },
     { totalInput: 100, totalCacheRead: 50 },
     { running: new Map([["tool-1", "read"]]) },
@@ -72,12 +76,14 @@ describe("RoachFooter Powerline styling", () => {
       expect(rendered).toContain(ICONS.folder);
       expect(rendered).toContain(ICONS.branch);
       expect(rendered).toContain(ICONS.model);
+      expect(rendered).toContain(ICONS.logo);
+      expect(rendered).toContain(ICONS.thinking);
     } finally {
       setUseNerdIcons(false);
     }
   });
 
-  it("renders the original-style foreground palette without background blocks", () => {
+  it("renders solid background blocks with 48;2 ANSI sequences", () => {
     const footer = new RoachFooter(
       ansiTheme,
       footerData(),
@@ -85,6 +91,9 @@ describe("RoachFooter Powerline styling", () => {
         cwd: "/tmp/powerline-project",
         getModelName: () => "test-model",
         getContextUsage: () => ({ tokens: 42_000, contextWindow: 200_000, percent: 21 }),
+        getGitStats: () => ({ ahead: 0, behind: 0, dirty: 0, untracked: 0 }),
+        getThinkingLevel: () => "high",
+        getModelInfo: () => ({ name: "test-model", isLatest: false }),
       },
       { totalInput: 100, totalCacheRead: 50 },
       { running: new Map() },
@@ -92,10 +101,10 @@ describe("RoachFooter Powerline styling", () => {
 
     const rendered = footer.render(100).join("\n");
 
-    expect(rendered).toContain("\x1b[38;2;0;175;175m");
-    expect(rendered).toContain("\x1b[38;2;215;135;175m");
-    expect(rendered).toContain("\x1b[38;5;244m");
-    expect(rendered).not.toContain("\x1b[48;");
+    expect(rendered).toContain("\x1b[48;2;0;175;175m");
+    expect(rendered).toContain("\x1b[48;2;215;135;175m");
+    expect(rendered).toContain("\x1b[48;2;200;150;50m");
+    expect(rendered).toContain("");
   });
 });
 
@@ -105,12 +114,14 @@ describe("RoachFooter status bridge", () => {
     const lines = footer.render(80);
 
     expect(lines.length).toBe(3);
-    expect(lines.join("\n")).toContain("powerline-project");
-    expect(lines.join("\n")).toContain("main");
-    expect(lines.join("\n")).toContain("test-model");
-    expect(lines.join("\n")).toContain("ctx");
-    expect(lines.join("\n")).toContain("cache 33%");
-    expect(lines.join("\n")).toContain("read");
+    const rendered = lines.join("\n");
+    expect(rendered).toContain("powerline-project");
+    expect(rendered).toContain("main");
+    expect(rendered).toContain("test-model");
+    expect(rendered).toContain("thinking:high");
+    expect(rendered).toContain("ctx");
+    expect(rendered).toContain("cache 33%");
+    expect(rendered).toContain("read");
     expectAllLinesFit(lines, 80);
   });
 
@@ -171,9 +182,9 @@ describe("RoachFooter status bridge", () => {
 
   it("renders distinct default, compact, and minimal preset layouts", () => {
     const statuses = new Map([["harness", "Ready"]]);
-    const defaultLines = createFooter(statuses, "default").render(100);
-    const compactLines = createFooter(statuses, "compact").render(100);
-    const minimalLines = createFooter(statuses, "minimal").render(100);
+    const defaultLines = createFooter(statuses, "default").render(150);
+    const compactLines = createFooter(statuses, "compact").render(150);
+    const minimalLines = createFooter(statuses, "minimal").render(150);
 
     expect(defaultLines.length).toBe(3);
     expect(compactLines.length).toBe(2);
@@ -195,5 +206,28 @@ describe("RoachFooter status bridge", () => {
         expectAllLinesFit(createFooter(statuses, preset).render(width), width);
       }
     }
+  });
+
+  it("renders git stats when available", () => {
+    const footer = createFooter(new Map(), "default", { ahead: 3, behind: 0, dirty: 5, untracked: 2 });
+    const rendered = footer.render(100).join("\n");
+
+    expect(rendered).toContain("⇡3");
+    expect(rendered).toContain("*5");
+    expect(rendered).toContain("?2");
+  });
+
+  it("renders model with (latest) tag when isLatest is true", () => {
+    const footer = createFooter(new Map(), "default", { ahead: 0, behind: 0, dirty: 0, untracked: 0 }, "high", { name: "Opus 4.5", isLatest: true });
+    const rendered = footer.render(100).join("\n");
+
+    expect(rendered).toContain("Opus 4.5 (latest)");
+  });
+
+  it("hides thinking segment when level is off", () => {
+    const footer = createFooter(new Map(), "default", { ahead: 0, behind: 0, dirty: 0, untracked: 0 }, "off");
+    const rendered = footer.render(100).join("\n");
+
+    expect(rendered).not.toContain("thinking:");
   });
 });

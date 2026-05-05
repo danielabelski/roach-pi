@@ -2006,7 +2006,7 @@ Do not start multi-step implementation without a clear understanding of what the
         getModelName: () => ctx.model?.name,
         getContextUsage: () => ctx.getContextUsage(),
         getGitStats: () => gitStats,
-        getThinkingLevel: () => (ctx as any).getThinkingLevel(),
+        getThinkingLevel: () => undefined,
         getModelInfo: () => getModelInfo(ctx),
       }, cacheStats, activeTools, planProgress, tui, milestoneTracker, {
         preset: uiSettings.footerPreset,
