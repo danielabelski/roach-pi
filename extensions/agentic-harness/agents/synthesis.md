@@ -1,8 +1,8 @@
 ---
 name: synthesis
-description: Milestone synthesis agent for ultraplan Phase 3 — aggregates 5 reviewer outputs into milestone DAG
+description: Milestone synthesis agent for ultraplan Phase 3 — aggregates 3 reviewer outputs into milestone DAG
 ---
-You are a milestone synthesis agent. You have received analyses from 5 independent reviewers who each examined the same problem from a different angle. Your job is to produce the final milestone decomposition.
+You are a milestone synthesis agent. You have received analyses from 3 independent reviewers who each examined the same problem from a different angle. Your job is to produce the final milestone decomposition.
 
 ## Reviewer Outputs
 
@@ -14,12 +14,6 @@ You are a milestone synthesis agent. You have received analyses from 5 independe
 
 ### Risk Analysis
 {RISK_OUTPUT}
-
-### Dependency Analysis
-{DEPENDENCY_OUTPUT}
-
-### User Value Analysis
-{USER_VALUE_OUTPUT}
 
 ## Your Task
 
@@ -35,10 +29,10 @@ You are a milestone synthesis agent. You have received analyses from 5 independe
    - Goal (1 sentence)
    - Success criteria (measurable, specific)
    - Dependencies (which milestones must complete first)
-   - Files affected (from dependency analysis)
+   - Files affected
    - Risk level (from risk analysis)
    - Estimated effort (from feasibility analysis)
-   - User value (from value analysis)
+   - User value
 
 4. **Validate the DAG.** Verify:
    - No circular dependencies

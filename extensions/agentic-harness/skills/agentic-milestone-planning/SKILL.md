@@ -1,11 +1,11 @@
 ---
 name: agentic-milestone-planning
-description: Decomposes complex, multi-day tasks into optimized milestones using parallel reviewer agents (ultraplan). Spawns 5 independent reviewers that analyze the problem from different angles, then synthesizes their findings into a milestone dependency DAG. Triggers when the user says "plan milestones", "break this into milestones", "ultraplan", or when agentic-long-run harness needs milestone generation.
+description: Decomposes complex, multi-day tasks into optimized milestones using parallel reviewer agents (ultraplan). Spawns 3 independent reviewers that analyze the problem from different angles, then synthesizes their findings into a milestone dependency DAG. Triggers when the user says "plan milestones", "break this into milestones", "ultraplan", or when agentic-long-run harness needs milestone generation.
 ---
 
 # Milestone Planning (Ultraplan)
 
-Decomposes a complex task into milestones by spawning 5 parallel reviewer agents, synthesizing their independent analyses, and producing a milestone dependency DAG.
+Decomposes a complex task into milestones by spawning 3 parallel reviewer agents, synthesizing their independent analyses, and producing a milestone dependency DAG.
 
 ## Core Principle
 
@@ -13,7 +13,7 @@ Milestones are the unit of agentic-long-running execution. A bad milestone decom
 
 ## Hard Gates
 
-1. **All 5 reviewer agents must run in parallel.** Sequential execution is prohibited. Dispatch all 5 concurrently using the `subagent` tool's parallel mode (`tasks` array).
+1. **All 3 reviewer agents must run in parallel.** Sequential execution is prohibited. Dispatch all 3 concurrently using the `subagent` tool's parallel mode (`tasks` array).
 2. **Each reviewer receives the full problem statement.** Do not split or filter the problem per reviewer. Every reviewer sees everything.
 3. **Reviewers must not see each other's findings.** Each reviewer operates independently. No cross-pollination during the review phase.
 4. **Synthesis must address every reviewer's concern.** The synthesis agent must explicitly respond to each finding — accepted, rejected with reason, or deferred to a specific milestone.
@@ -82,19 +82,17 @@ Before dispatching reviewers, frame the problem:
 
 ### Phase 2: Parallel Reviewer Dispatch
 
-Dispatch all 5 reviewer agents concurrently using the `subagent` tool's parallel mode (`tasks` array). Each receives the full Problem Brief and its reviewer-specific prompt.
+Dispatch all 3 reviewer agents concurrently using the `subagent` tool's parallel mode (`tasks` array). Each receives the full Problem Brief and its reviewer-specific prompt.
 
 **Dispatch example:**
 
-Use the `subagent` tool with the `tasks` parameter to run all 5 reviewers in parallel:
+Use the `subagent` tool with the `tasks` parameter to run all 3 reviewers in parallel:
 
 ```
 tasks: [
   { agent: "reviewer-feasibility", task: "[Problem Brief + feasibility prompt]" },
   { agent: "reviewer-architecture", task: "[Problem Brief + architecture prompt]" },
-  { agent: "reviewer-risk", task: "[Problem Brief + risk prompt]" },
-  { agent: "reviewer-dependency", task: "[Problem Brief + dependency prompt]" },
-  { agent: "reviewer-user-value", task: "[Problem Brief + user-value prompt]" }
+  { agent: "reviewer-risk", task: "[Problem Brief + risk prompt]" }
 ]
 ```
 
@@ -232,119 +230,20 @@ Overall risk-ordered milestone sequence:
 ...
 ```
 
-#### Reviewer 4: Dependency Analyst
-
-```
-You are a dependency analyst reviewing a problem decomposition.
-
-## Problem Brief
-{PROBLEM_BRIEF}
-
-## Your Task
-
-Map all dependencies — between milestones, between files, between external
-systems — and verify that the proposed decomposition respects them.
-
-1. **File conflict analysis:** List all files that will be created or
-   modified. Identify files touched by multiple milestones — these create
-   ordering constraints.
-
-2. **Interface dependency graph:** Map which milestones produce interfaces
-   that other milestones consume. Draw the dependency DAG.
-
-3. **External dependency mapping:** List external systems, APIs, libraries,
-   or services each milestone depends on. Flag any that require setup,
-   credentials, or may be unavailable.
-
-4. **Shared state identification:** Identify shared state (databases,
-   config files, global settings) that multiple milestones modify.
-   These require strict ordering.
-
-5. **Parallelization opportunities:** Identify milestones with zero
-   dependencies between them — these can run concurrently.
-
-## Output Format
-
-**Dependency DAG:**
-```
-M1 (no deps) ─┬─→ M3 (depends on M1, M2)
-M2 (no deps) ─┘         │
-                         └─→ M4 (depends on M3)
-```
-
-**File conflict matrix:**
-| File | Milestones | Ordering constraint |
-|------|-----------|-------------------|
-| path/to/file | M1, M3 | M1 before M3 |
-
-**Parallelizable groups:**
-- Group A: [M1, M2] — no shared files, no interface deps
-- Group B: [M4, M5] — after Group A completes
-
-**External dependencies:**
-- [dependency]: required by [milestones], setup needed: [yes/no]
-```
-
-#### Reviewer 5: User Value Analyst
-
-```
-You are a user value analyst reviewing a problem decomposition.
-
-## Problem Brief
-{PROBLEM_BRIEF}
-
-## Your Task
-
-Ensure milestone ordering maximizes early value delivery and maintains
-user motivation throughout multi-day execution.
-
-1. **Value ordering:** Which milestones deliver the most visible,
-   user-facing value? These should come early to provide feedback
-   and maintain confidence.
-
-2. **Demo-ability:** After each milestone, can the user see/test
-   something meaningful? Milestones that produce only internal
-   infrastructure with no visible output erode confidence.
-
-3. **Feedback loops:** Which milestones benefit most from early user
-   feedback? These should be prioritized so corrections are cheap.
-
-4. **Minimum viable milestone:** What is the smallest first milestone
-   that proves the approach works? This validates the overall direction
-   before investing in the full plan.
-
-5. **Abort points:** After which milestones could the user reasonably
-   decide to stop and still have something useful? Mark these as
-   natural checkpoints.
-
-## Output Format
-
-**Value-ordered milestone sequence:**
-1. [milestone] — **Value:** [what user sees] — **Demo:** [how to verify]
-2. [milestone] — **Value:** [what user sees] — **Demo:** [how to verify]
-...
-
-**Minimum viable milestone:** [which milestone and why]
-
-**Natural abort points:** [milestones after which stopping is reasonable]
-
-**Low-value milestones:** [milestones that could be cut if time is short]
-```
-
 ### Phase 2.5: Reviewer Failure Handling
 
-After dispatching all 5 reviewers, wait for all to complete. If any reviewer fails:
+After dispatching all 3 reviewers, wait for all to complete. If any reviewer fails:
 
 1. **Timeout or error:** Re-dispatch the failed reviewer once with the same prompt. If it fails again, proceed without it.
 2. **Empty or unusable output:** If a reviewer returns fewer than 3 sentences or clearly did not address the Problem Brief, re-dispatch once. If still unusable, proceed without it.
-3. **Proceeding with fewer than 5 reviewers:** Log the missing perspective(s) in the synthesis handoff. The synthesis agent must note the gap in its Conflict Resolution Log: "Missing perspective: [reviewer name] — [reason]. Milestone plan may have blind spot in [area]."
-4. **Minimum viable count:** At least 3 of 5 reviewers must succeed. If fewer than 3 complete successfully, stop and report to user — the problem may be too ambiguous for automated review.
+3. **Proceeding with fewer than 3 reviewers:** Log the missing perspective(s) in the synthesis handoff. The synthesis agent must note the gap in its Conflict Resolution Log: "Missing perspective: [reviewer name] — [reason]. Milestone plan may have blind spot in [area]."
+4. **Minimum viable count:** At least 2 of 3 reviewers must succeed. If fewer than 2 complete successfully, stop and report to user — the problem may be too ambiguous for automated review.
 
 ### Phase 3: Synthesis
 
-After all 5 reviewers complete, dispatch a **Synthesis Agent** that receives all 5 reviewer outputs and produces the final milestone plan.
+After all 3 reviewers complete, dispatch a **Synthesis Agent** that receives all 3 reviewer outputs and produces the final milestone plan.
 
-**Verbatim handoff rule (Hard Gate equivalent):** The main agent must copy each reviewer's full output into the designated `{..._OUTPUT}` placeholder without summarizing, filtering, reframing, or adding commentary. This is the same principle as the agentic-run-plan validator's fixed template — the main agent has read all 5 outputs and may unconsciously bias the synthesis by selective framing. Verbatim copy eliminates this channel.
+**Verbatim handoff rule (Hard Gate equivalent):** The main agent must copy each reviewer's full output into the designated `{..._OUTPUT}` placeholder without summarizing, filtering, reframing, or adding commentary. This is the same principle as the agentic-run-plan validator's fixed template — the main agent has read all 3 outputs and may unconsciously bias the synthesis by selective framing. Verbatim copy eliminates this channel.
 
 **What must NOT happen during handoff:**
 - Summarizing a reviewer's output ("The feasibility analyst mainly said...")
@@ -355,7 +254,7 @@ After all 5 reviewers complete, dispatch a **Synthesis Agent** that receives all
 The synthesis agent prompt:
 
 ```
-You are a milestone synthesis agent. You have received analyses from 5
+You are a milestone synthesis agent. You have received analyses from 3
 independent reviewers who each examined the same problem from a different
 angle. Your job is to produce the final milestone decomposition.
 
@@ -369,12 +268,6 @@ angle. Your job is to produce the final milestone decomposition.
 
 ### Risk Analysis
 {RISK_OUTPUT}
-
-### Dependency Analysis
-{DEPENDENCY_OUTPUT}
-
-### User Value Analysis
-{USER_VALUE_OUTPUT}
 
 ## Your Task
 
@@ -392,10 +285,10 @@ angle. Your job is to produce the final milestone decomposition.
    - Goal (1 sentence)
    - Success criteria (measurable, specific)
    - Dependencies (which milestones must complete first)
-   - Files affected (from dependency analysis)
+   - Files affected
    - Risk level (from risk analysis)
    - Estimated effort (from feasibility analysis)
-   - User value (from value analysis)
+   - User value
 
 4. **Validate the DAG.** Verify:
    - No circular dependencies
@@ -514,8 +407,6 @@ docs/engineering-discipline/harness/<session-slug>/
     ├── feasibility.md
     ├── architecture.md
     ├── risk.md
-    ├── dependency.md
-    ├── user-value.md
     └── synthesis.md
 ```
 
@@ -607,9 +498,9 @@ Attempts: number of plan-execute-review cycles attempted (incremented at each St
 ## Minimal Checklist
 
 - [ ] Problem Brief composed with goal, scope, constraints, success criteria
-- [ ] All 5 reviewers dispatched in parallel (single message)
+- [ ] All 3 reviewers dispatched in parallel (single message)
 - [ ] Each reviewer received the full Problem Brief
-- [ ] Synthesis agent received all 5 reviewer outputs
+- [ ] Synthesis agent received all 3 reviewer outputs
 - [ ] All reviewer conflicts explicitly resolved
 - [ ] Every milestone has measurable success criteria
 - [ ] Milestone DAG has no circular dependencies
