@@ -5,6 +5,7 @@ export interface ToolActivity {
 }
 
 export type AsyncRunStatus = "spawning" | "running" | "completed" | "failed" | "interrupted";
+export type AsyncDependency = "background" | "needed-before-final";
 
 export interface RunProgress {
   lastActivity?: ToolActivity;
@@ -18,6 +19,7 @@ export interface AsyncRunRecord {
   runId: string;
   agent: string;
   task: string;
+  dependency?: AsyncDependency;
   status: AsyncRunStatus;
   pid?: number;
   pgid?: number;

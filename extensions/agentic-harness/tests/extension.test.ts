@@ -32,6 +32,7 @@ vi.mock("../ui-settings.js", () => ({
 
 import extension from "../index.js";
 import { resolveAgenticUiSettings } from "../ui-settings.js";
+import { getDefaultRegistry } from "../async-registry.js";
 
 const originalSubagentEnv = {
   PI_SUBAGENT_DEPTH: process.env.PI_SUBAGENT_DEPTH,
@@ -144,7 +145,7 @@ describe("Extension Registration", () => {
     expect(tool.name).toBe("subagent");
     expect(tool.promptSnippet).toBeDefined();
     expect(tool.promptGuidelines).toBeDefined();
-    expect(tool.promptGuidelines.length).toBe(8);
+    expect(tool.promptGuidelines.length).toBe(10);
     expect(tool.renderCall).toBeTypeOf("function");
     expect(tool.renderResult).toBeTypeOf("function");
   });
@@ -827,6 +828,12 @@ describe("Validator Information Barrier", () => {
     // Verify schema has planFile and planTaskId properties
     expect(schema.properties.planFile).toBeDefined();
     expect(schema.properties.planTaskId).toBeDefined();
+    expect(schema.properties.asyncDependency).toMatchObject({
+      type: "string",
+      enum: ["background", "needed-before-final"],
+    });
+    expect(schema.properties.action.enum).toEqual(["status", "interrupt", "wait"]);
+    expect(schema.properties.waitTimeoutMs).toBeDefined();
     expect(schema.properties.tasks.items.properties.planFile).toBeDefined();
     expect(schema.properties.tasks.items.properties.planTaskId).toBeDefined();
     expect(schema.properties.chain.items.properties.planFile).toBeDefined();
@@ -841,6 +848,41 @@ describe("Validator Information Barrier", () => {
     expect(subagentTool).toBeDefined();
     const guidelines = subagentTool!.promptGuidelines || [];
     expect(guidelines.some((g: string) => g.includes("planFile") && g.includes("planTaskId"))).toBe(true);
+    expect(guidelines.some((g: string) => g.includes("asyncDependency") && g.includes("needed-before-final"))).toBe(true);
+    expect(guidelines.some((g: string) => g.includes("action:'wait'"))).toBe(true);
+  });
+});
+
+describe("subagent async wait action", () => {
+  it("returns a completed async run result", async () => {
+    const { mockPi, tools } = createMockPi();
+    extension(mockPi);
+    const subagentTool = tools.get("subagent");
+    expect(subagentTool).toBeDefined();
+
+    const registry = getDefaultRegistry();
+    const runId = registry.register("explorer", "inspect issue", "native", undefined, "needed-before-final");
+    registry.complete(runId, "completed", {
+      agent: "explorer",
+      agentSource: "bundled",
+      task: "inspect issue",
+      exitCode: 0,
+      messages: [{ role: "assistant", content: [{ type: "text", text: "root cause found" }] }],
+      stderr: "",
+      usage: { input: 1, output: 2, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 3, turns: 1 },
+    });
+
+    const result = await subagentTool.execute(
+      "wait-call",
+      { action: "wait", id: runId },
+      undefined,
+      undefined,
+      { cwd: process.cwd(), hasUI: false, ui: {} },
+    );
+
+    expect(result.content[0].text).toBe("root cause found");
+    expect(result.details.asyncRun.runId).toBe(runId);
+    expect(result.details.results[0].asyncRunId).toBeUndefined();
   });
 });
 

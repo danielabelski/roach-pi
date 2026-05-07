@@ -58,7 +58,7 @@ It is intentionally inspectable: commands, tools, hooks, agents, and skills are 
 ### Subagents and review fleets
 
 - `subagent` runs specialized pi subprocesses in single, parallel, or chain mode.
-- Async subagents can run in the background and be inspected or interrupted later.
+- Async subagents can run in the background, declare when their answer is needed before the final response, and be waited on, inspected, or interrupted later by run id.
 - `/ultrareview` dispatches 10 independent reviewers, then verifies and synthesizes the findings.
 - Optional team mode can coordinate bounded worker batches with durable run state and tmux-backed panes.
 
@@ -150,7 +150,7 @@ Supported modes:
 | Single | One focused investigation or execution task. |
 | Parallel | Independent reviewers, explorers, or workers. |
 | Chain | Sequential pipelines where each step consumes the previous output. |
-| Async | Background tasks that can be checked or interrupted by run id. |
+| Async | Background tasks that can be waited on, checked, or interrupted by run id. Use `asyncDependency: "needed-before-final"` when the lead must join before finalizing. |
 
 Bundled agents include `explorer`, `planner`, `worker`, `plan-compliance`, `plan-worker`, `plan-validator`, reviewer agents for feasibility/architecture/risk/dependency/user value, and review agents for bugs/security/performance/test coverage/consistency.
 

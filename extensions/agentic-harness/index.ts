@@ -11,7 +11,7 @@ import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { discoverAgents, type SubagentContextMode } from "./agents.js";
 import { runAgent, mapWithConcurrencyLimit, MAX_CONCURRENCY, MAX_PARALLEL_TASKS, resolveDepthConfig, getCycleViolations, spawnAsync } from "./subagent.js";
-import { emptyUsage, isResultError, isResultSuccess, getResultSummaryText, type SingleResult, type SubagentDetails } from "./types.js";
+import { emptyUsage, isResultError, isResultSuccess, getResultSummaryText, type AsyncDependency, type SingleResult, type SubagentDetails } from "./types.js";
 import { renderCall, renderResult } from "./render.js";
 import { parsePlan } from "./plan-parser.js";
 import { buildValidatorPrompt } from "./validator-template.js";
@@ -378,10 +378,14 @@ export default function (pi: ExtensionAPI) {
     planFile: Type.Optional(Type.String({ description: "Path to plan file. Required when agent is plan-validator — the validator prompt is built from this file, not from the task field." })),
     planTaskId: Type.Optional(Type.Number({ description: "Task number in the plan file to validate (e.g. 1 for Task 1). Required when agent is plan-validator." })),
     async: Type.Optional(Type.Boolean({ description: "Execute in background, return runId immediately. Only works with single mode (agent + task)." })),
-    action: Type.Optional(stringEnum(["status", "interrupt"], {
-      description: 'Run management action. "status" lists or inspects runs; "interrupt" stops a run.',
+    asyncDependency: Type.Optional(stringEnum(["background", "needed-before-final"], {
+      description: 'Agent-declared dependency for async:true runs. Use "needed-before-final" when the lead must wait for this answer before finalizing.',
     })),
-    id: Type.Optional(Type.String({ description: "Run ID for status/interrupt actions." })),
+    action: Type.Optional(stringEnum(["status", "interrupt", "wait"], {
+      description: 'Run management action. "status" lists or inspects runs; "interrupt" stops a run; "wait" blocks until a run completes and returns its result.',
+    })),
+    id: Type.Optional(Type.String({ description: "Run ID for status/interrupt/wait actions." })),
+    waitTimeoutMs: Type.Optional(Type.Number({ description: "Maximum milliseconds for action:\"wait\" before returning a timeout. Default 600000. Set 0 to wait indefinitely." })),
   });
 
   type AgentScope = "user" | "project" | "both";
@@ -426,6 +430,11 @@ export default function (pi: ExtensionAPI) {
     worktree?: boolean;
     planFile?: string;
     planTaskId?: number;
+    async?: boolean;
+    asyncDependency?: AsyncDependency;
+    action?: "status" | "interrupt" | "wait";
+    id?: string;
+    waitTimeoutMs?: number;
   };
 
   const makeDetails = (mode: "single" | "parallel") => (results: SingleResult[]): SubagentDetails => ({ mode, results });
@@ -604,6 +613,8 @@ export default function (pi: ExtensionAPI) {
         "ONLY use these exact agent names — do NOT invent or guess agent names: explorer, worker, planner, plan-worker, plan-validator, plan-compliance, reviewer-feasibility, reviewer-architecture, reviewer-risk, reviewer-bug, reviewer-security, reviewer-performance, reviewer-test-coverage, reviewer-consistency, reviewer-verifier, review-synthesis.",
         "All agents use the default model. Do NOT specify or mention specific models (no Haiku, Sonnet, etc.).",
         "For codebase exploration: use 'explorer'. For general execution: use 'worker'. For plan execution: use 'plan-compliance' → 'plan-worker' → 'plan-validator'.",
+        "Use async:true only when the lead can safely continue. If the subagent answer is needed before the final response, set asyncDependency:'needed-before-final' and later call action:'wait' with the returned run id.",
+        "Use action:'wait' to join an async run and retrieve its completed result. Use action:'status' for inspection and action:'interrupt' to stop a running async run.",
         "For ultraplan milestone reviews: dispatch all 3 reviewers in parallel: reviewer-feasibility, reviewer-architecture, reviewer-risk.",
         "For ultrareview code reviews: dispatch 10 tasks in parallel (5 reviewers × 2 seeds): reviewer-bug, reviewer-security, reviewer-performance, reviewer-test-coverage, reviewer-consistency. Then run reviewer-verifier on the aggregated findings, then review-synthesis on the verified result.",
         "Max 12 parallel tasks with 10 concurrent. Chain mode stops on first error.",
@@ -699,6 +710,7 @@ export default function (pi: ExtensionAPI) {
                 `Agent: ${record.agent}`,
                 `Task: ${record.task}`,
                 `Status: ${record.status}`,
+                record.dependency ? `Dependency: ${record.dependency}` : null,
                 `Backend: ${record.backend}`,
                 record.pid ? `PID: ${record.pid}` : null,
                 `Elapsed: ${Math.round(record.progress.elapsedMs / 1000)}s`,
@@ -719,7 +731,7 @@ export default function (pi: ExtensionAPI) {
               };
             }
             const statusText = runs.map(r =>
-              `${r.runId} [${r.status}] ${r.agent}: ${r.task.slice(0, 60)}${r.task.length > 60 ? "..." : ""} (${Math.round(r.progress.elapsedMs / 1000)}s)`
+              `${r.runId} [${r.status}${r.dependency ? `/${r.dependency}` : ""}] ${r.agent}: ${r.task.slice(0, 60)}${r.task.length > 60 ? "..." : ""} (${Math.round(r.progress.elapsedMs / 1000)}s)`
             ).join("\n");
             return {
               content: [{ type: "text" as const, text: `Active runs (${runs.length}):\n${statusText}` }],
@@ -745,6 +757,45 @@ export default function (pi: ExtensionAPI) {
             return {
               content: [{ type: "text" as const, text: `Interrupt signal sent to run ${params.id}.` }],
               details: undefined,
+            };
+          }
+          if (params.action === "wait") {
+            if (!params.id) {
+              return {
+                content: [{ type: "text" as const, text: "Error: wait action requires id parameter." }],
+                details: undefined,
+                isError: true,
+              };
+            }
+            const waitTimeoutMs = params.waitTimeoutMs ?? 600_000;
+            const { record, timedOut } = await registry.waitForCompletion(params.id, waitTimeoutMs);
+            if (!record) {
+              return {
+                content: [{ type: "text" as const, text: `No run found with id: ${params.id}` }],
+                details: undefined,
+                isError: true,
+              };
+            }
+            if (timedOut) {
+              return {
+                content: [{ type: "text" as const, text: `Timed out waiting for run ${record.runId}. Current status: ${record.status}.` }],
+                details: { ...makeDetails("single")([]), asyncRun: record },
+                isError: true,
+              };
+            }
+            if (!record.result) {
+              const failed = record.status !== "completed";
+              return {
+                content: [{ type: "text" as const, text: `Run ${record.runId} finished with status ${record.status} and no captured result.` }],
+                details: { ...makeDetails("single")([]), asyncRun: record },
+                isError: failed,
+              };
+            }
+            const failed = isResultError(record.result);
+            return {
+              content: [{ type: "text" as const, text: getResultSummaryText(record.result, maxOutput) }],
+              details: { ...makeDetails("single")([record.result]), asyncRun: record },
+              isError: failed || undefined,
             };
           }
         }
@@ -917,9 +968,12 @@ export default function (pi: ExtensionAPI) {
               reads,
               progress,
               contextMode: context,
-            }, registry);
+            }, registry, params.asyncDependency);
+            const dependencyText = params.asyncDependency === "needed-before-final"
+              ? "\nDependency: needed-before-final. Call subagent action:\"wait\" with this run id before finalizing dependent work."
+              : "";
             return {
-              content: [{ type: "text" as const, text: `Async run started: ${runId}` }],
+              content: [{ type: "text" as const, text: `Async run started: ${runId}${dependencyText}` }],
               details: {
                 ...makeDetails("single")([{
                   agent,

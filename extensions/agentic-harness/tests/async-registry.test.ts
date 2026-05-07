@@ -20,6 +20,13 @@ describe("RunRegistry", () => {
     expect(record!.progress.usage.input).toBe(0);
   });
 
+  it("register records async dependency when provided", () => {
+    const registry = new RunRegistry();
+    const runId = registry.register("test-agent", "test task", "native", undefined, "needed-before-final");
+
+    expect(registry.getStatus(runId)!.dependency).toBe("needed-before-final");
+  });
+
   it("update changes status and pid", () => {
     const registry = new RunRegistry();
     const runId = registry.register("agent", "task", "native");
@@ -144,6 +151,40 @@ describe("RunRegistry", () => {
   it("getStatus returns undefined for unknown runId", () => {
     const registry = new RunRegistry();
     expect(registry.getStatus("nonexistent")).toBeUndefined();
+  });
+
+  it("waitForCompletion resolves immediately for completed runs", async () => {
+    const registry = new RunRegistry();
+    const runId = registry.register("agent", "task", "native");
+    registry.complete(runId, "completed");
+
+    await expect(registry.waitForCompletion(runId)).resolves.toMatchObject({
+      record: expect.objectContaining({ runId, status: "completed" }),
+      timedOut: false,
+    });
+  });
+
+  it("waitForCompletion resolves when a running async run completes", async () => {
+    const registry = new RunRegistry();
+    const runId = registry.register("agent", "task", "native");
+
+    const wait = registry.waitForCompletion(runId, 1000);
+    registry.complete(runId, "completed");
+
+    await expect(wait).resolves.toMatchObject({
+      record: expect.objectContaining({ runId, status: "completed" }),
+      timedOut: false,
+    });
+  });
+
+  it("waitForCompletion times out with the current record", async () => {
+    const registry = new RunRegistry();
+    const runId = registry.register("agent", "task", "native");
+
+    await expect(registry.waitForCompletion(runId, 1)).resolves.toMatchObject({
+      record: expect.objectContaining({ runId, status: "spawning" }),
+      timedOut: true,
+    });
   });
 
   it("update is no-op for unknown runId", () => {

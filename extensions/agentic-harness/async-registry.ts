@@ -3,7 +3,7 @@ import { readFile, writeFile, mkdir, readdir, rename } from "fs/promises";
 import { join, dirname } from "path";
 import { execFile } from "child_process";
 import { killTmuxPane } from "./tmux.js";
-import { emptyUsage, type AsyncRunRecord, type AsyncRunStatus, type RunProgress, type SingleResult } from "./types.js";
+import { emptyUsage, type AsyncDependency, type AsyncRunRecord, type AsyncRunStatus, type RunProgress, type SingleResult } from "./types.js";
 
 export type RunRegistryListener = (runId: string, record: AsyncRunRecord) => void;
 export type CompletionNotifier = (record: AsyncRunRecord) => void;
@@ -30,7 +30,7 @@ export class RunRegistry {
   private killTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private completionNotifier?: CompletionNotifier;
 
-  register(agent: string, task: string, backend: "native" | "tmux", abortController?: AbortController): string {
+  register(agent: string, task: string, backend: "native" | "tmux", abortController?: AbortController, dependency?: AsyncDependency): string {
     const runId = randomBytes(8).toString("hex");
     const now = new Date().toISOString();
     const record: AsyncRunRecord = {
@@ -38,6 +38,7 @@ export class RunRegistry {
       runId,
       agent,
       task,
+      dependency,
       status: "spawning",
       progress: { usage: emptyUsage(), elapsedMs: 0, startedAt: Date.now() },
       createdAt: now,
@@ -89,6 +90,40 @@ export class RunRegistry {
 
   getStatus(runId: string): AsyncRunRecord | undefined {
     return this.runs.get(runId)?.record;
+  }
+
+  waitForCompletion(runId: string, timeoutMs = 600_000): Promise<{ record?: AsyncRunRecord; timedOut: boolean }> {
+    const record = this.getStatus(runId);
+    if (!record) return Promise.resolve({ record: undefined, timedOut: false });
+    if (isTerminalStatus(record.status)) return Promise.resolve({ record, timedOut: false });
+
+    return new Promise((resolve) => {
+      let settled = false;
+      let unsubscribe: (() => void) | undefined;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+
+      const finish = (result: { record?: AsyncRunRecord; timedOut: boolean }) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        unsubscribe?.();
+        resolve(result);
+      };
+
+      unsubscribe = this.subscribe((updatedRunId, updatedRecord) => {
+        if (updatedRunId !== runId) return;
+        if (isTerminalStatus(updatedRecord.status)) {
+          finish({ record: updatedRecord, timedOut: false });
+        }
+      });
+
+      if (timeoutMs > 0) {
+        timer = setTimeout(() => {
+          finish({ record: this.getStatus(runId), timedOut: true });
+        }, timeoutMs);
+        timer.unref?.();
+      }
+    });
   }
 
   listActive(): AsyncRunRecord[] {
@@ -232,6 +267,10 @@ export class RunRegistry {
       try { listener(runId, record); } catch { /* ignore listener errors */ }
     }
   }
+}
+
+function isTerminalStatus(status: AsyncRunStatus): boolean {
+  return status === "completed" || status === "failed" || status === "interrupted";
 }
 
 let defaultRegistry: RunRegistry | undefined;

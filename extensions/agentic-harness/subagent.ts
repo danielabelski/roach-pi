@@ -5,7 +5,7 @@ import { join, basename, dirname, relative } from "path";
 import { randomBytes } from "crypto";
 import { existsSync } from "fs";
 import type { AgentConfig, SubagentContextMode } from "./agents.js";
-import type { SingleResult, SubagentDetails } from "./types.js";
+import type { AsyncDependency, SingleResult, SubagentDetails } from "./types.js";
 import { emptyUsage, getFinalOutput } from "./types.js";
 import { createArtifactContext, readDeclaredFiles, readFilePrefix, type ArtifactContext } from "./artifacts.js";
 import { captureWorktreeDiff, cleanupWorktree, createWorktree, type WorktreeContext } from "./worktree.js";
@@ -1136,6 +1136,7 @@ export interface SpawnAsyncResult {
 export async function spawnAsync(
   opts: RunAgentOptions,
   registry: RunRegistry = getDefaultRegistry(),
+  dependency?: AsyncDependency,
 ): Promise<SpawnAsyncResult> {
   const abortController = new AbortController();
   const runId = registry.register(
@@ -1143,6 +1144,7 @@ export async function spawnAsync(
     opts.task,
     opts.executionMode === "tmux" ? "tmux" : "native",
     abortController,
+    dependency,
   );
 
   Promise.resolve().then(async () => {
