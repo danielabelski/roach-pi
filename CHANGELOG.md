@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.24.0](https://github.com/tmdgusya/roach-pi/compare/v1.23.0...v1.24.0) (2026-05-07)
+
+### Features
+
+* guard async subagent final responses ([986adae](https://github.com/tmdgusya/roach-pi/commit/986adaeb18a5a4e3111bd98aedc020c4b5e19b17))
+
 ## [1.23.0](https://github.com/tmdgusya/roach-pi/compare/v1.22.1...v1.23.0) (2026-05-06)
 
 ### Features
