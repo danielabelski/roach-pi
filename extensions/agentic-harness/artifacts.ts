@@ -25,12 +25,28 @@ export interface ArtifactOptions {
   progress?: string;
 }
 
-function baseRunsDir(cwd: string): string {
+export function baseRunsDir(cwd: string): string {
   return process.env.PI_SUBAGENT_ARTIFACT_ROOT || join(cwd, ".pi", "agent", "runs");
 }
 
-function sanitizeSegment(value: string): string {
+export function sanitizeArtifactSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "run";
+}
+
+export function getArtifactRootDir(cwd: string, rootRunId: string): string {
+  return resolve(baseRunsDir(cwd), sanitizeArtifactSegment(rootRunId));
+}
+
+export function getArtifactRunDir(options: Pick<ArtifactOptions, "cwd" | "rootRunId" | "runId" | "agentName">): string {
+  return join(
+    getArtifactRootDir(options.cwd, options.rootRunId),
+    "subagents",
+    `${sanitizeArtifactSegment(options.agentName)}-${sanitizeArtifactSegment(options.runId)}`,
+  );
+}
+
+export function getArtifactOutputPath(options: Pick<ArtifactOptions, "cwd" | "rootRunId" | "runId" | "agentName"> & { output: string }): string {
+  return resolveArtifactPath(getArtifactRunDir(options), options.output);
 }
 
 function isInside(parent: string, child: string): boolean {
@@ -61,8 +77,8 @@ export function resolveDeclaredReadPath(cwd: string, value: string): string {
 }
 
 export async function createArtifactContext(options: ArtifactOptions): Promise<ArtifactContext> {
-  const rootDir = resolve(baseRunsDir(options.cwd), sanitizeSegment(options.rootRunId));
-  const runDir = join(rootDir, "subagents", `${sanitizeSegment(options.agentName)}-${sanitizeSegment(options.runId)}`);
+  const rootDir = getArtifactRootDir(options.cwd, options.rootRunId);
+  const runDir = getArtifactRunDir(options);
   await mkdir(runDir, { recursive: true });
 
   const outputFile = options.output ? resolveArtifactPath(runDir, options.output) : undefined;

@@ -7,7 +7,7 @@ import { existsSync } from "fs";
 import type { AgentConfig, SubagentContextMode } from "./agents.js";
 import type { AsyncDependency, SingleResult, SubagentDetails } from "./types.js";
 import { emptyUsage, getFinalOutput } from "./types.js";
-import { createArtifactContext, readDeclaredFiles, readFilePrefix, type ArtifactContext } from "./artifacts.js";
+import { createArtifactContext, getArtifactOutputPath, readDeclaredFiles, readFilePrefix, type ArtifactContext } from "./artifacts.js";
 import { captureWorktreeDiff, cleanupWorktree, createWorktree, type WorktreeContext } from "./worktree.js";
 import { processPiJsonLine } from "./runner-events.js";
 import { getDefaultRegistry, type RunRegistry } from "./async-registry.js";
@@ -1146,10 +1146,25 @@ export async function spawnAsync(
     abortController,
     dependency,
   );
+  const asyncOutput = opts.output ?? opts.agent?.output ?? "output.md";
+  const outputFile = getArtifactOutputPath({
+    cwd: opts.cwd,
+    rootRunId: runId,
+    runId,
+    agentName: opts.agentName,
+    output: asyncOutput,
+  });
+  registry.update(runId, { outputFile });
 
   Promise.resolve().then(async () => {
     const mergedOpts: RunAgentOptions = {
       ...opts,
+      output: asyncOutput,
+      ownership: {
+        runId,
+        rootRunId: runId,
+        owner: opts.agentName,
+      },
       signal: abortController.signal,
       onLifecycleEvent: (event) => {
         if (event.phase === "spawned") {

@@ -26,6 +26,11 @@ export interface AsyncRunRecord {
   paneId?: string;
   sessionName?: string;
   tmuxBinary?: string;
+  outputFile?: string;
+  notified?: boolean;
+  notificationSentAt?: string;
+  consumedAt?: string;
+  completedAt?: string;
   progress: RunProgress;
   result?: SingleResult;
   createdAt: string;

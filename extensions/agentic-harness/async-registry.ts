@@ -13,6 +13,10 @@ interface RunEntry {
   abortController?: AbortController;
 }
 
+export interface RunRegistryOptions {
+  rootDir?: string;
+}
+
 const ASYNC_RUN_FILE = "async-run.json";
 const KILL_TIMEOUT_MS = 5000;
 
@@ -29,6 +33,12 @@ export class RunRegistry {
   private globalListeners = new Set<RunRegistryListener>();
   private killTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private completionNotifier?: CompletionNotifier;
+  private rootDir?: string;
+  private pendingPersistence = new Set<Promise<void>>();
+
+  constructor(options: RunRegistryOptions = {}) {
+    this.rootDir = options.rootDir;
+  }
 
   register(agent: string, task: string, backend: "native" | "tmux", abortController?: AbortController, dependency?: AsyncDependency): string {
     const runId = randomBytes(8).toString("hex");
@@ -47,6 +57,7 @@ export class RunRegistry {
     };
     this.runs.set(runId, { record, abortController });
     this.notify(runId, record);
+    this.schedulePersist(runId);
     return runId;
   }
 
@@ -57,6 +68,11 @@ export class RunRegistry {
     paneId?: string;
     sessionName?: string;
     tmuxBinary?: string;
+    outputFile?: string;
+    notified?: boolean;
+    notificationSentAt?: string;
+    consumedAt?: string;
+    completedAt?: string;
     progress?: Partial<RunProgress>;
     result?: SingleResult;
   }): void {
@@ -69,6 +85,11 @@ export class RunRegistry {
     if (patch.paneId !== undefined) entry.record.paneId = patch.paneId;
     if (patch.sessionName !== undefined) entry.record.sessionName = patch.sessionName;
     if (patch.tmuxBinary !== undefined) entry.record.tmuxBinary = patch.tmuxBinary;
+    if (patch.outputFile !== undefined) entry.record.outputFile = patch.outputFile;
+    if (patch.notified !== undefined) entry.record.notified = patch.notified;
+    if (patch.notificationSentAt !== undefined) entry.record.notificationSentAt = patch.notificationSentAt;
+    if (patch.consumedAt !== undefined) entry.record.consumedAt = patch.consumedAt;
+    if (patch.completedAt !== undefined) entry.record.completedAt = patch.completedAt;
     if (patch.progress) {
       entry.record.progress = { ...entry.record.progress, ...patch.progress };
     }
@@ -76,16 +97,21 @@ export class RunRegistry {
     entry.record.updatedAt = now;
     entry.record.progress.elapsedMs = Date.now() - entry.record.progress.startedAt;
     this.notify(runId, entry.record);
+    this.schedulePersist(runId);
   }
 
   complete(runId: string, status: "completed" | "failed" | "interrupted", result?: SingleResult): void {
-    this.update(runId, { status, result });
+    this.update(runId, {
+      status,
+      result,
+      completedAt: new Date().toISOString(),
+      outputFile: result?.artifacts?.outputFile,
+    });
     this.clearKillTimer(runId);
     const entry = this.runs.get(runId);
-    if (entry && this.completionNotifier) {
+    if (entry && this.completionNotifier && !entry.record.notified) {
       try { this.completionNotifier(entry.record); } catch { /* ignore */ }
     }
-    setTimeout(() => this.runs.delete(runId), 60_000).unref?.();
   }
 
   getStatus(runId: string): AsyncRunRecord | undefined {
@@ -99,13 +125,18 @@ export class RunRegistry {
     entry.record.updatedAt = new Date().toISOString();
     entry.record.progress.elapsedMs = Date.now() - entry.record.progress.startedAt;
     this.notify(runId, entry.record);
+    this.schedulePersist(runId);
     return true;
   }
 
-  waitForCompletion(runId: string, timeoutMs = 600_000): Promise<{ record?: AsyncRunRecord; timedOut: boolean }> {
-    const record = this.getStatus(runId);
-    if (!record) return Promise.resolve({ record: undefined, timedOut: false });
-    if (isTerminalStatus(record.status)) return Promise.resolve({ record, timedOut: false });
+  async waitForCompletion(runId: string, timeoutMs = 600_000): Promise<{ record?: AsyncRunRecord; timedOut: boolean }> {
+    let record = this.getStatus(runId);
+    if (!record) {
+      record = await this.load(runId, this.rootDir);
+      if (record) this.restore(record);
+    }
+    if (!record) return { record: undefined, timedOut: false };
+    if (isTerminalStatus(record.status)) return { record, timedOut: false };
 
     return new Promise((resolve) => {
       let settled = false;
@@ -220,6 +251,17 @@ export class RunRegistry {
     }
   }
 
+  private schedulePersist(runId: string): void {
+    const promise = this.persist(runId, this.rootDir)
+      .catch(() => undefined)
+      .finally(() => this.pendingPersistence.delete(promise));
+    this.pendingPersistence.add(promise);
+  }
+
+  async flushPersistence(): Promise<void> {
+    await Promise.allSettled(Array.from(this.pendingPersistence));
+  }
+
   async persist(runId: string, rootDir = defaultRunStateRoot()): Promise<void> {
     const entry = this.runs.get(runId);
     if (!entry) return;
@@ -237,6 +279,33 @@ export class RunRegistry {
     } catch {
       return undefined;
     }
+  }
+
+  restore(record: AsyncRunRecord): void {
+    this.runs.set(record.runId, { record });
+    this.notify(record.runId, record);
+  }
+
+  async restorePersisted(rootDir = this.rootDir ?? defaultRunStateRoot()): Promise<AsyncRunRecord[]> {
+    const records = await this.listPersisted(rootDir);
+    for (const record of records) this.restore(record);
+    return records;
+  }
+
+  markNotified(runId: string): boolean {
+    const entry = this.runs.get(runId);
+    if (!entry) return false;
+    if (entry.record.notified) return true;
+    this.update(runId, { notified: true, notificationSentAt: new Date().toISOString() });
+    return true;
+  }
+
+  markConsumed(runId: string): boolean {
+    const entry = this.runs.get(runId);
+    if (!entry) return false;
+    if (entry.record.consumedAt) return true;
+    this.update(runId, { consumedAt: new Date().toISOString() });
+    return true;
   }
 
   async listPersisted(rootDir = defaultRunStateRoot()): Promise<AsyncRunRecord[]> {

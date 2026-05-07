@@ -1,4 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
+import { mkdtemp, rm } from "fs/promises";
+import { join } from "path";
+import { tmpdir } from "os";
 import { RunRegistry, getDefaultRegistry } from "../async-registry.js";
 import type { SingleResult } from "../types.js";
 
@@ -334,5 +337,69 @@ describe("full async lifecycle", () => {
     const success = registry.abort(runId);
     expect(success).toBe(true);
     expect(controller.signal.aborted).toBe(true);
+  });
+});
+
+describe("RunRegistry durability", () => {
+  it("persists records on register, update, and complete", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "pi-runs-"));
+    try {
+      const registry = new RunRegistry({ rootDir });
+      const runId = registry.register("agent", "task", "native", undefined, "needed-before-final");
+      registry.update(runId, { status: "running", outputFile: "/tmp/out.md" });
+      registry.complete(runId, "completed", {
+        agent: "agent",
+        agentSource: "unknown",
+        task: "task",
+        exitCode: 0,
+        messages: [{ role: "assistant", content: [{ type: "text", text: "done" }] }],
+        stderr: "",
+        usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, cost: 0, contextTokens: 0, turns: 1 },
+        artifacts: { outputFile: "/tmp/out.md" },
+      });
+      await registry.flushPersistence();
+
+      const restored = await new RunRegistry({ rootDir }).load(runId, rootDir);
+      expect(restored).toMatchObject({ runId, status: "completed", outputFile: "/tmp/out.md" });
+      expect(restored?.result?.messages[0].content[0].text).toBe("done");
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("waitForCompletion restores a completed persisted record", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "pi-runs-"));
+    try {
+      const first = new RunRegistry({ rootDir });
+      const runId = first.register("agent", "task", "native");
+      first.complete(runId, "completed");
+      await first.flushPersistence();
+
+      const second = new RunRegistry({ rootDir });
+      await expect(second.waitForCompletion(runId, 1)).resolves.toMatchObject({
+        record: expect.objectContaining({ runId, status: "completed" }),
+        timedOut: false,
+      });
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
+  });
+
+  it("markNotified and markConsumed persist lifecycle flags", async () => {
+    const rootDir = await mkdtemp(join(tmpdir(), "pi-runs-"));
+    try {
+      const registry = new RunRegistry({ rootDir });
+      const runId = registry.register("agent", "task", "native");
+      expect(registry.markNotified(runId)).toBe(true);
+      expect(registry.markConsumed(runId)).toBe(true);
+      await registry.flushPersistence();
+
+      const restored = await registry.load(runId, rootDir);
+      expect(restored?.notified).toBe(true);
+      expect(restored?.notificationSentAt).toBeTruthy();
+      expect(restored?.consumedAt).toBeTruthy();
+    } finally {
+      await rm(rootDir, { recursive: true, force: true });
+    }
   });
 });

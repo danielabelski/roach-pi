@@ -1,4 +1,5 @@
 // tests/subagent.test.ts
+import { readFileSync } from "fs";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   extractFinalOutput,
@@ -11,6 +12,7 @@ import {
   DEFAULT_MAX_DEPTH,
   buildTmuxLaunchEnv,
 } from "../subagent.js";
+import { getArtifactOutputPath } from "../artifacts.js";
 
 describe("extractFinalOutput", () => {
   it("should extract last assistant text from JSON output", () => {
@@ -132,6 +134,33 @@ describe("Constants", () => {
   it("should have correct limits", () => {
     expect(MAX_PARALLEL_TASKS).toBe(12);
     expect(MAX_CONCURRENCY).toBe(10);
+  });
+});
+
+describe("async artifact path helpers", () => {
+  it("computes the same default output path shape used by subagent artifacts", () => {
+    const cwd = "/tmp/project";
+    const outputPath = getArtifactOutputPath({
+      cwd,
+      rootRunId: "run 1",
+      runId: "run 1",
+      agentName: "reviewer/risk",
+      output: "output.md",
+    });
+
+    expect(outputPath).toBe("/tmp/project/.pi/agent/runs/run-1/subagents/reviewer-risk-run-1/output.md");
+  });
+});
+
+describe("spawnAsync durable contract", () => {
+  it("passes durable ownership and default output to runAgent", () => {
+    const source = readFileSync(new URL("../subagent.ts", import.meta.url), "utf8");
+    expect(source).toContain("asyncOutput");
+    expect(source).toContain("output.md");
+    expect(source).toContain("getArtifactOutputPath");
+    expect(source).toContain("rootRunId: runId");
+    expect(source).toContain("owner: opts.agentName");
+    expect(source).toContain("registry.update(runId, { outputFile })");
   });
 });
 

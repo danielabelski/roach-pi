@@ -647,7 +647,7 @@ export default function (pi: ExtensionAPI) {
         "All agents use the default model. Do NOT specify or mention specific models (no Haiku, Sonnet, etc.).",
         "For codebase exploration: use 'explorer'. For general execution: use 'worker'. For plan execution: use 'plan-compliance' → 'plan-worker' → 'plan-validator'.",
         "Use async:true only when the lead can safely continue. If the subagent answer is needed before the final response, set asyncDependency:'needed-before-final' and later call action:'wait' with the returned run id. Unclassified async runs also block final responses until resolved.",
-        "Use action:'wait' to join an async run and retrieve its completed result. Use action:'status' for inspection, action:'interrupt' to stop a running async run, and action:'mark-background' only when you explicitly choose to finalize without that run's result.",
+        "Async starts return a run id and durable output file path when available; use action:'wait' to join rather than guessing. Use action:'status' for inspection, action:'interrupt' to stop a running async run, and action:'mark-background' only when you explicitly choose to finalize without that run's result.",
         "For ultraplan milestone reviews: dispatch all 3 reviewers in parallel: reviewer-feasibility, reviewer-architecture, reviewer-risk.",
         "For ultrareview code reviews: dispatch 10 tasks in parallel (5 reviewers × 2 seeds): reviewer-bug, reviewer-security, reviewer-performance, reviewer-test-coverage, reviewer-consistency. Then run reviewer-verifier on the aggregated findings, then review-synthesis on the verified result.",
         "Max 12 parallel tasks with 10 concurrent. Chain mode stops on first error.",
@@ -745,6 +745,7 @@ export default function (pi: ExtensionAPI) {
                 `Status: ${record.status}`,
                 record.dependency ? `Dependency: ${record.dependency}` : null,
                 `Backend: ${record.backend}`,
+                record.outputFile ? `Output file: ${record.outputFile}` : null,
                 record.pid ? `PID: ${record.pid}` : null,
                 `Elapsed: ${Math.round(record.progress.elapsedMs / 1000)}s`,
                 record.progress.lastActivity ? `Last tool: ${record.progress.lastActivity.name}` : null,
@@ -841,12 +842,14 @@ export default function (pi: ExtensionAPI) {
             }
             if (!record.result) {
               const failed = record.status !== "completed";
+              registry.markConsumed(record.runId);
               return {
                 content: [{ type: "text" as const, text: `Run ${record.runId} finished with status ${record.status} and no captured result.` }],
                 details: { ...makeDetails("single")([]), asyncRun: record },
                 isError: failed,
               };
             }
+            registry.markConsumed(record.runId);
             const failed = isResultError(record.result);
             return {
               content: [{ type: "text" as const, text: getResultSummaryText(record.result, maxOutput) }],
@@ -1177,14 +1180,25 @@ export default function (pi: ExtensionAPI) {
 
   const registry = getDefaultRegistry();
   registry.setCompletionNotifier((record) => {
+    if (!registry.markNotified(record.runId)) return;
     const statusEmoji = record.status === "completed" ? "✅" : record.status === "failed" ? "❌" : "⚠️";
     const summary = record.result
       ? `Exit code: ${record.result.exitCode}`
       : `Status: ${record.status}`;
     const elapsed = Math.round(record.progress.elapsedMs / 1000);
+    const outputFile = record.outputFile || record.result?.artifacts?.outputFile;
+    const resultText = record.result ? getResultSummaryText(record.result, record.result.maxOutput) : "";
+    const usage = record.result?.usage ?? record.progress.usage;
     pi.sendUserMessage(
-      `${statusEmoji} Async subagent completed: ${record.agent} — ${record.task.slice(0, 80)}${record.task.length > 80 ? "..." : ""}\n` +
-      `Run: ${record.runId} | ${summary} | ${elapsed}s`,
+      `<async-subagent-notification>\n` +
+      `<run_id>${record.runId}</run_id>\n` +
+      `<agent>${record.agent}</agent>\n` +
+      `<status>${record.status}</status>\n` +
+      `<summary>${statusEmoji} Async subagent completed: ${record.agent} — ${summary} | ${elapsed}s</summary>\n` +
+      (outputFile ? `<output_file>${outputFile}</output_file>\n` : "") +
+      (resultText ? `<result>${resultText}</result>\n` : "") +
+      `<usage><input>${usage.input}</input><output>${usage.output}</output><turns>${usage.turns}</turns></usage>\n` +
+      `</async-subagent-notification>`,
       { deliverAs: "followUp" },
     );
   });
@@ -2015,7 +2029,7 @@ Do not start multi-step implementation without a clear understanding of what the
     harnessProgress.invalidate();
   }
 
-  pi.on("message_end", async (event, ctx) => {
+  (pi as any).on("message_end", async (event: any, ctx: any) => {
     const msg = event.message;
     if (msg.role === "assistant") {
       const usage = msg.usage;
@@ -2129,6 +2143,7 @@ Do not start multi-step implementation without a clear understanding of what the
     sessionPlanPaths.clear();
     planProgress.clear();
     milestoneTracker.clear();
+    await getDefaultRegistry().restorePersisted(join(ctx.cwd, ".pi", "agent", "runs"));
     const branchEntries = ctx.sessionManager?.getBranch?.() ?? [];
 
     // --- Structured-first session restore (M6) ---
