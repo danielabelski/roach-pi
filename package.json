@@ -15,17 +15,20 @@
       "extensions/fff-search/index.ts",
       "extensions/workspace-memory/index.ts",
       "node_modules/@code-yeongyu/pi-nested-agents-md/src/index.ts",
-      "node_modules/pi-lsp-client/src/index.ts"
+      "node_modules/pi-lsp-client/src/index.ts",
+      "node_modules/pi-code-previews/index.ts"
     ]
   },
   "dependencies": {
     "@code-yeongyu/pi-nested-agents-md": "github:code-yeongyu/pi-nested-agents-md",
     "@ff-labs/fff-node": "^0.6.4",
     "@sinclair/typebox": "^0.34.49",
+    "pi-code-previews": "github:mattleong/pi-code-previews",
     "pi-lsp-client": "github:code-yeongyu/pi-lsp-client"
   },
   "bundledDependencies": [
     "@code-yeongyu/pi-nested-agents-md",
+    "pi-code-previews",
     "pi-lsp-client"
   ],
   "devDependencies": {
