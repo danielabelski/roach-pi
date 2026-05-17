@@ -270,8 +270,8 @@ export class RoachFooter implements Component {
     const normalLines = this.renderNormalFooter(width);
     const border = normalLines[0];
 
-    const hasStructuredMilestones = this.harnessProgress?.hasState() ?? false;
-    const hasStructuredPlan = this.harnessProgress?.hasState() ?? false;
+    const hasStructuredMilestones = this.harnessProgress?.hasMilestones() ?? false;
+    const hasStructuredPlan = this.harnessProgress?.hasPlan() ?? false;
     const hasMilestones = hasStructuredMilestones || (this.milestoneTracker?.hasMilestones() ?? false);
     const hasPlan = hasStructuredPlan || (this.planProgress?.hasPlan() ?? false);
 
@@ -279,7 +279,7 @@ export class RoachFooter implements Component {
       const lines: string[] = [border];
       const pw = Math.max(0, width - 4);
       if (hasMilestones) {
-        if (this.harnessProgress?.hasState()) {
+        if (hasStructuredMilestones && this.harnessProgress) {
           lines.push(...this.harnessProgress.renderMilestones(this.theme, pw).map((l) => fitLine(l, width)));
         } else if (this.milestoneTracker) {
           lines.push(...this.milestoneTracker.render(this.theme, pw).map((l) => fitLine(l, width)));
@@ -287,7 +287,7 @@ export class RoachFooter implements Component {
         if (hasPlan) lines.push(fitLine(this.theme.fg("dim", "  ·"), width));
       }
       if (hasPlan) {
-        if (this.harnessProgress?.hasState()) {
+        if (hasStructuredPlan && this.harnessProgress) {
           lines.push(...this.harnessProgress.renderPlan(this.theme, pw).map((l) => fitLine(l, width)));
         } else if (this.planProgress) {
           lines.push(...this.planProgress.render(this.theme, pw).map((l) => fitLine(l, width)));

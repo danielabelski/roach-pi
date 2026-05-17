@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { visibleWidth } from "@mariozechner/pi-tui";
 import type { ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
 import { ICONS, ICONS_PLAIN, RoachFooter, setUseNerdIcons } from "../footer.js";
+import { HarnessProgressProvider } from "../harness-progress.js";
+import type { HarnessState } from "../harness-state.js";
 import type { FooterGlyphMode } from "../ui-settings.js";
 
 setUseNerdIcons(false);
@@ -145,6 +147,64 @@ describe("RoachFooter status bridge", () => {
 
     expect(lines.join("\n")).toContain("Team running");
     expectAllLinesFit(lines, 150);
+  });
+
+  it("does not render structured milestone progress for plan-only harness state", () => {
+    const now = "2026-05-17T00:00:00.000Z";
+    const harnessProgress = new HarnessProgressProvider();
+    const state: HarnessState = {
+      schemaVersion: 1,
+      runId: "run-plan-only",
+      title: "Plan only",
+      status: "running",
+      milestones: [],
+      plans: [{
+        id: "plan-1",
+        milestoneId: "",
+        title: "Plan Only",
+        goal: "Build the plan-only flow",
+        tasks: [{
+          id: 1,
+          name: "First task",
+          status: "pending",
+          dependencies: [],
+          files: [],
+          testCommands: [],
+          acceptanceCriteria: [],
+        }],
+        createdAt: now,
+        updatedAt: now,
+      }],
+      todos: [],
+      eventSeq: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    harnessProgress.hydrate(state);
+
+    const footer = new RoachFooter(
+      stubTheme,
+      footerData(),
+      {
+        cwd: "/tmp/powerline-project",
+        getModelName: () => "test-model",
+        getContextUsage: () => ({ tokens: 42_000, contextWindow: 200_000, percent: 21 }),
+        getGitStats: () => ({ ahead: 0, behind: 0, dirty: 0, untracked: 0 }),
+        getThinkingLevel: () => "high",
+        getModelInfo: () => ({ name: "test-model", isLatest: false }),
+      },
+      { totalInput: 100, totalCacheRead: 50 },
+      { running: new Map() },
+      null,
+      null,
+      null,
+      harnessProgress,
+    );
+
+    const rendered = footer.render(120).join("\n");
+
+    expect(rendered).toContain("Build the plan-only flow");
+    expect(rendered).not.toContain("0/0");
   });
 
   it("renders multiple extension statuses in stable key order", () => {

@@ -44,6 +44,14 @@ export class HarnessProgressProvider {
     return this.cachedState !== null;
   }
 
+  hasMilestones(): boolean {
+    return (this.cachedState?.milestones.length ?? 0) > 0;
+  }
+
+  hasPlan(): boolean {
+    return this.cachedState ? selectActivePlan(this.cachedState) !== undefined : false;
+  }
+
   setRunId(runId: string): void {
     const changed = this.runId !== runId;
     this.runId = runId;
