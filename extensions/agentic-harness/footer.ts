@@ -4,7 +4,6 @@ import type { ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
 import { basename } from "path";
 import { PLAN_PROGRESS_SPINNER_MS } from "./harness-progress.js";
 import type { FooterGlyphMode, FooterPresetName } from "./ui-settings.js";
-import type { HarnessProgressProvider } from "./harness-progress.js";
 import { getCurrentTodos, subscribeOnChange, getTodoMarker, type SimpleTodoItem } from "./simple-todo.js";
 
 // Types
@@ -195,10 +194,8 @@ export class RoachFooter implements Component {
   private cacheStats: CacheStats;
   private activeTools: ActiveTools;
   private tui: Pick<TUI, "requestRender"> | null;
-  private harnessProgress: HarnessProgressProvider | null;
   private preset: FooterPresetName;
   private glyphs: FooterGlyphMode;
-  private unsubscribeHarnessProgress: (() => void) | null = null;
   private unsubscribeTodo: (() => void) | null = null;
   private spinnerTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -209,7 +206,6 @@ export class RoachFooter implements Component {
     cacheStats: CacheStats,
     activeTools: ActiveTools,
     tui: Pick<TUI, "requestRender"> | null = null,
-    harnessProgress: HarnessProgressProvider | null = null,
     options: FooterOptions = {},
   ) {
     this.theme = theme;
@@ -217,11 +213,9 @@ export class RoachFooter implements Component {
     this.footerCtx = footerCtx;
     this.cacheStats = cacheStats;
     this.activeTools = activeTools;
-    this.harnessProgress = harnessProgress;
     this.preset = options.preset ?? "default";
     this.glyphs = options.glyphs ?? (useNerdIcons ? "nerd" : "plain");
     this.tui = tui;
-    this.unsubscribeHarnessProgress = this.harnessProgress?.subscribeOnChange(() => this.schedulePlanRender()) ?? null;
     this.unsubscribeTodo = subscribeOnChange(() => this.schedulePlanRender());
     this.updateSpinnerTimer();
   }
@@ -230,7 +224,6 @@ export class RoachFooter implements Component {
 
   dispose() {
     if (this.spinnerTimer) { clearInterval(this.spinnerTimer); this.spinnerTimer = null; }
-    this.unsubscribeHarnessProgress?.(); this.unsubscribeHarnessProgress = null;
     this.unsubscribeTodo?.(); this.unsubscribeTodo = null;
   }
 
@@ -240,9 +233,7 @@ export class RoachFooter implements Component {
   }
 
   private hasRunningPlanTasks(): boolean {
-    const harnessRunning = this.harnessProgress?.hasState() && this.harnessProgress?.hasRunningTasks();
-    const todoRunning = getCurrentTodos().some((t) => t.status === "in_progress");
-    return harnessRunning || todoRunning;
+    return getCurrentTodos().some((t) => t.status === "in_progress");
   }
 
   private updateSpinnerTimer() {
@@ -304,25 +295,11 @@ export class RoachFooter implements Component {
     const normalLines = this.renderNormalFooter(width);
     const border = normalLines[0];
 
-    const hasStructuredMilestones = this.harnessProgress?.hasMilestones() ?? false;
-    const hasStructuredPlan = this.harnessProgress?.hasPlan() ?? false;
     const simpleTodoLines = this.renderSimpleTodos(width);
     const hasSimpleTodos = simpleTodoLines.length > 0;
 
-    if (hasStructuredMilestones || hasStructuredPlan || hasSimpleTodos) {
-      const lines: string[] = [border];
-      const pw = Math.max(0, width - 4);
-      if (hasStructuredMilestones && this.harnessProgress) {
-        lines.push(...this.harnessProgress.renderMilestones(this.theme, pw).map((l) => fitLine(l, width)));
-        if (hasStructuredPlan || hasSimpleTodos) lines.push(fitLine(this.theme.fg("dim", "  ·"), width));
-      }
-      if (hasStructuredPlan && this.harnessProgress) {
-        lines.push(...this.harnessProgress.renderPlan(this.theme, pw).map((l) => fitLine(l, width)));
-      }
-      if (hasSimpleTodos) {
-        lines.push(...simpleTodoLines);
-      }
-      lines.push(...normalLines);
+    if (hasSimpleTodos) {
+      const lines: string[] = [border, ...simpleTodoLines, ...normalLines];
       return lines;
     }
     return normalLines;

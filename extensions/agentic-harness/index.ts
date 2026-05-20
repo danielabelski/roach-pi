@@ -2154,7 +2154,7 @@ Do not start multi-step implementation without a clear understanding of what the
         getGitStats: () => gitStats,
         getThinkingLevel: () => undefined,
         getModelInfo: () => getModelInfo(ctx),
-      }, cacheStats, activeTools, tui, harnessProgress, {
+      }, cacheStats, activeTools, tui, {
         preset: uiSettings.footerPreset,
         glyphs: uiSettings.footerGlyphs,
       });
