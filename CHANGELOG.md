@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.29.0](https://github.com/tmdgusya/roach-pi/compare/v1.28.0...v1.29.0) (2026-05-22)
+
+### Features
+
+* bundle pi-mcp-adapter as 8th battery-included extension ([1136abc](https://github.com/tmdgusya/roach-pi/commit/1136abc524ff6a82abd524ac245462d8627638b0))
+
 ## [1.28.0](https://github.com/tmdgusya/roach-pi/compare/v1.27.0...v1.28.0) (2026-05-21)
 
 ### Features
