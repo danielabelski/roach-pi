@@ -213,15 +213,15 @@
 
         <li>
           <h3>
-            <code>/ultraplan</code>
+            <code>/plan --milestones</code>
             <span data-lang="en"> — Milestone Decomposition</span>
             <span data-lang="ko"> — 마일스톤 분해</span>
           </h3>
           <p data-lang="en">
-            For complex multi-day tasks. Dispatches 5 independent reviewer agents in parallel (Feasibility, Architecture, Risk, Dependency, User Value), then synthesizes findings into an optimized milestone DAG.
+            For complex multi-day tasks. Dispatches 3 independent reviewer agents in parallel (Feasibility, Architecture, Risk), then synthesizes findings into an optimized milestone DAG.
           </p>
           <p data-lang="ko">
-            복잡한 며칠짜리 작업을 위해. 5개의 독립적인 리뷰어 에이전트를 병렬로 디스패치(타당성, 아키텍처, 리스크, 의존성, 사용자 가치)한 후, 최적화된 마일스톤 DAG로 종합합니다.
+            복잡한 며칠짜리 작업을 위해. 3개의 독립적인 리뷰어 에이전트를 병렬로 디스패치(타당성, 아키텍처, 리스크)한 후, 최적화된 마일스톤 DAG로 종합합니다.
           </p>
         </li>
 
@@ -499,15 +499,15 @@
 
         <details>
           <summary>
-            <span data-lang="en">Can I use this extension without the /ultraplan command?</span>
-            <span data-lang="ko">/ultraplan 명령 없이 이 익스텐션을 사용할 수 있나요?</span>
+            <span data-lang="en">How do I create milestone plans?</span>
+            <span data-lang="ko">마일스톤 계획은 어떻게 만드나요?</span>
           </summary>
           <div class="faq-body">
             <p data-lang="en">
-              Absolutely. The three slash commands are independent. Use <code>/clarify</code> + <code>/plan</code> for single-session tasks. Use <code>/ultraplan</code> only when you need milestone-level decomposition for complex, multi-day projects.
+              Use <code>/clarify</code> + <code>/plan</code> for single-session tasks. Use <code>/plan --milestones</code> when you need milestone-level decomposition for complex, multi-day projects.
             </p>
             <p data-lang="ko">
-              물론입니다. 세 개의 슬래시 명령은 독립적입니다. 단일 세션 작업에는 <code>/clarify</code> + <code>/plan</code>을 사용하세요. 복잡한 며칠짜리 프로젝트에 마일스톤 수준 분해가 필요할 때만 <code>/ultraplan</code>을 사용하세요.
+              단일 세션 작업에는 <code>/clarify</code> + <code>/plan</code>을 사용하세요. 복잡한 며칠짜리 프로젝트에 마일스톤 수준 분해가 필요할 때는 <code>/plan --milestones</code>를 사용하세요.
             </p>
           </div>
         </details>

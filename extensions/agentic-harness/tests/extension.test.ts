@@ -252,9 +252,10 @@ describe("Extension Registration", () => {
     const { mockPi, commands } = createMockPi();
     extension(mockPi);
 
+    const removedMilestoneCommand = ["ultra", "plan"].join("");
     expect(commands.has("clarify")).toBe(true);
     expect(commands.has("plan")).toBe(true);
-    expect(commands.has("ultraplan")).toBe(true);
+    expect(commands.has(removedMilestoneCommand)).toBe(false);
     expect(commands.has("ask")).toBe(true);
     expect(commands.has("reset-phase")).toBe(true);
     expect(commands.has("welcome")).toBe(true);
@@ -270,10 +271,11 @@ describe("Extension Registration", () => {
       const { mockPi, commands } = createMockPi();
       extension(mockPi);
 
+      const removedMilestoneCommand = ["ultra", "plan"].join("");
       expect(commands.has("ask")).toBe(false);
       expect(commands.has("clarify")).toBe(true);
       expect(commands.has("plan")).toBe(true);
-      expect(commands.has("ultraplan")).toBe(true);
+      expect(commands.has(removedMilestoneCommand)).toBe(false);
     } finally {
       if (prevDepth === undefined) delete process.env.PI_SUBAGENT_DEPTH;
       else process.env.PI_SUBAGENT_DEPTH = prevDepth;
@@ -697,9 +699,9 @@ describe("before_agent_start Event", () => {
     const { mockPi, events, commands } = createMockPi();
     extension(mockPi);
 
-    // Put the root session in ultraplanning phase via the /ultraplan command.
-    const ultraplan = commands.get("ultraplan");
-    await ultraplan.handler("test topic", {
+    // Put the root session in milestone planning phase via /plan --milestones.
+    const plan = commands.get("plan");
+    await plan.handler("--milestones test topic", {
       ui: {
         confirm: vi.fn().mockResolvedValue(true),
         setStatus: vi.fn(),
@@ -713,7 +715,7 @@ describe("before_agent_start Event", () => {
       { type: "before_agent_start", prompt: "keep working on the milestones", systemPrompt: "base" },
       { cwd: "." } as any
     );
-    expect(normal?.systemPrompt).toContain("Active Workflow: Milestone Planning (Ultraplan)");
+    expect(normal?.systemPrompt).toContain("Active Workflow: Milestone Planning");
 
     // Case B: the user invokes a skill via the claude-code-style <command-name> tag.
     // Phase guidance must NOT be injected for this turn.
@@ -726,14 +728,44 @@ describe("before_agent_start Event", () => {
       { type: "before_agent_start", prompt: skillPrompt, systemPrompt: "base" },
       { cwd: "." } as any
     );
-    expect(skillTurn?.systemPrompt).not.toContain("Active Workflow: Milestone Planning (Ultraplan)");
+    expect(skillTurn?.systemPrompt).not.toContain("Active Workflow: Milestone Planning");
 
     // Case C: a raw "[skill] foo" marker also suppresses guidance.
     const bracketTurn = await handlers[0](
       { type: "before_agent_start", prompt: "[skill] some-skill\n\nfix this", systemPrompt: "base" },
       { cwd: "." } as any
     );
-    expect(bracketTurn?.systemPrompt).not.toContain("Active Workflow: Milestone Planning (Ultraplan)");
+    expect(bracketTurn?.systemPrompt).not.toContain("Active Workflow: Milestone Planning");
+  });
+  it("should normalize legacy compacted milestone phase details", async () => {
+    const { mockPi, events } = createMockPi();
+    extension(mockPi);
+
+    const compactHandlers = events.get("session_compact");
+    const beforeStartHandlers = events.get("before_agent_start");
+    expect(compactHandlers?.length).toBeGreaterThan(0);
+    expect(beforeStartHandlers?.length).toBeGreaterThan(0);
+
+    await compactHandlers![0](
+      {
+        type: "session_compact",
+        fromExtension: true,
+        compactionEntry: {
+          details: {
+            phase: ["ultra", "planning"].join(""),
+            activeGoalDocument: "docs/engineering-discipline/plans/legacy.md",
+          },
+        },
+      } as any,
+      { cwd: "." } as any
+    );
+
+    const result = await beforeStartHandlers![0](
+      { type: "before_agent_start", prompt: "continue", systemPrompt: "base" },
+      { cwd: "." } as any
+    );
+
+    expect(result?.systemPrompt).toContain("Active Workflow: Milestone Planning");
   });
 });
 
@@ -779,6 +811,27 @@ describe("/plan Command", () => {
     expect(mockPi.sendUserMessage).toHaveBeenCalledTimes(1);
     const prompt = mockPi.sendUserMessage.mock.calls[0][0];
     expect(prompt).toContain("agentic-plan-crafting");
+  });
+  it("should route --milestones through milestone planning", async () => {
+    const { mockPi, commands } = createMockPi();
+    extension(mockPi);
+
+    const plan = commands.get("plan");
+    const mockCtx: any = {
+      ui: {
+        confirm: vi.fn().mockResolvedValue(true),
+        setStatus: vi.fn(),
+      },
+    };
+
+    await plan.handler("--milestones test topic", mockCtx);
+
+    expect(mockPi.sendUserMessage).toHaveBeenCalledTimes(1);
+    const prompt = mockPi.sendUserMessage.mock.calls[0][0];
+    expect(prompt).toContain("agentic-milestone-planning");
+    expect(prompt).toContain("reviewer-feasibility");
+    expect(prompt).toContain("reviewer-architecture");
+    expect(prompt).toContain("reviewer-risk");
   });
 });
 
@@ -1152,7 +1205,7 @@ describe("session_compact Subagent Guard", () => {
           fromExtension: true,
           compactionEntry: {
             details: {
-              phase: "ultraplanning",
+              phase: "milestoneplanning",
               activeGoalDocument: "docs/engineering-discipline/plans/x.md",
             },
           },

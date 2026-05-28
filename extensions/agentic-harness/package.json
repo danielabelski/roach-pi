@@ -1,7 +1,7 @@
 {
   "name": "pi-agentic-harness",
   "version": "1.30.0",
-  "description": "Agentic harness commands for clarification, planning, and ultraplan.",
+  "description": "Agentic harness commands for clarification and planning.",
   "type": "module",
   "scripts": {
     "test": "mkdir -p node_modules/.tmp && TMPDIR=$PWD/node_modules/.tmp vitest run",

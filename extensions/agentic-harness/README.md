@@ -7,11 +7,10 @@ The agent dynamically generates questions, selects reviewers, and drives workflo
 ## Features
 
 - **`/clarify`**: The agent asks dynamic, context-aware questions one at a time to resolve ambiguity. It generates questions and choices on the fly based on your request, while exploring the codebase in parallel. Ends with a structured Context Brief.
-- **`/plan`**: Delegates to the agent in strict agentic-plan-crafting mode, ensuring executable implementation plans with no placeholders.
-- **`/ultraplan`**: The agent dynamically decides which reviewer perspectives are needed for your specific problem, dispatches them in parallel, and synthesizes findings into a milestone DAG.
+- **`/plan`**: Delegates to the agent in strict agentic-plan-crafting mode, ensuring executable implementation plans with no placeholders. Use `/plan --milestones` to decompose complex work into a milestone DAG with parallel reviewers.
 - **Structured progress tracking**: Milestones, plan tasks, and todos are tracked through durable structured state instead of markdown parsing. The footer shows live task lifecycle transitions (`running` → `completed`/`failed`) and restores progress from structured session replay events.
 - **`/ask`**: Manual test command for the `ask_user_question` tool.
-- **`/reset-phase`**: Resets the workflow phase to idle (useful if you want to exit clarify/plan/ultraplan mode manually).
+- **`/reset-phase`**: Resets the workflow phase to idle (useful if you want to exit clarify/plan mode manually).
 - **`ask_user_question` tool**: Registered as an LLM tool that the agent calls autonomously whenever it encounters ambiguity — not just during `/clarify`.
 
 ## How It Works
@@ -22,7 +21,7 @@ The extension uses three key mechanisms:
 2. **`resources_discover` event** — automatically registers `~/engineering-discipline/skills/` so the agent has access to agentic-clarification, agentic-plan-crafting, and agentic-milestone-planning skill rules.
    - Compatibility mode (default): discovered skills are merged with existing skill sources.
    - If duplicate skill names exist, the first discovered skill is kept (extension-first override is not guaranteed).
-3. **`before_agent_start` event** — injects workflow phase guidance into the system prompt so the agent stays on track during `/clarify`, `/plan`, or `/ultraplan` sessions.
+3. **`before_agent_start` event** — injects workflow phase guidance into the system prompt so the agent stays on track during `/clarify` or `/plan` sessions.
 
 ## Prerequisites
 
@@ -65,7 +64,7 @@ Then use the slash commands:
 
 1. `/clarify` — resolve ambiguity before planning (outputs a Context Brief)
 2. `/plan` — create an executable implementation plan from the Context Brief
-3. `/ultraplan` — decompose complex tasks into milestones with parallel reviewers
+3. `/plan --milestones` — decompose complex tasks into milestones with parallel reviewers
 
 The `ask_user_question` tool is also available to the agent at all times — it will ask you questions autonomously whenever it detects ambiguity, even outside of `/clarify` mode.
 

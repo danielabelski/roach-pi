@@ -145,8 +145,8 @@ Plan execution uses a **compliance → worker → validator** loop, so implement
 |---|---|
 | `/clarify [topic]` | Resolve ambiguity with dynamic questions and parallel exploration |
 | `/plan [topic]` | Create an executable implementation plan |
-| `/ultraplan [topic]` | Break complex work into milestones using five planning reviewers |
-| `/reset-phase` | Clear active clarify/plan/ultraplan state |
+| `/plan --milestones [topic]` | Break complex work into milestones using three planning reviewers |
+| `/reset-phase` | Clear active clarify/plan state |
 
 ---
 
@@ -321,8 +321,8 @@ pi --no-nested-agents    Disable at startup
 |---|---|
 | `/clarify [topic]` | Resolve ambiguity with dynamic questions and parallel exploration |
 | `/plan [topic]` | Create an executable implementation plan |
-| `/ultraplan [topic]` | Break complex work into milestones using five planning reviewers |
-| `/reset-phase` | Clear active clarify/plan/ultraplan state |
+| `/plan --milestones [topic]` | Break complex work into milestones using three planning reviewers |
+| `/reset-phase` | Clear active clarify/plan state |
 
 ### Review
 

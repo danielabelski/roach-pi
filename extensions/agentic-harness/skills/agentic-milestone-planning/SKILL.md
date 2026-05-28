@@ -1,9 +1,9 @@
 ---
 name: agentic-milestone-planning
-description: Decomposes complex, multi-day tasks into optimized milestones using parallel reviewer agents (ultraplan). Spawns 3 independent reviewers that analyze the problem from different angles, then synthesizes their findings into a milestone dependency DAG. Triggers when the user says "plan milestones", "break this into milestones", "ultraplan", or when agentic-long-run harness needs milestone generation.
+description: Decomposes complex, multi-day tasks into optimized milestones using parallel reviewer agents. Spawns 3 independent reviewers that analyze the problem from different angles, then synthesizes their findings into a milestone dependency DAG. Triggers when the user says "plan milestones", "break this into milestones", uses `/plan --milestones`, or when agentic-long-run harness needs milestone generation.
 ---
 
-# Milestone Planning (Ultraplan)
+# Milestone Planning
 
 Decomposes a complex task into milestones by spawning 3 parallel reviewer agents, synthesizing their independent analyses, and producing a milestone dependency DAG.
 
@@ -26,7 +26,7 @@ Milestones are the unit of agentic-long-running execution. A bad milestone decom
 
 - When the user presents a complex, multi-day task
 - When the agentic-long-run harness needs milestone decomposition
-- When the user says "plan milestones", "break this into milestones", or "ultraplan"
+- When the user says "plan milestones", "break this into milestones", or uses `/plan --milestones`
 - When a task clearly requires multiple independent implementation phases
 
 ## When NOT To Use

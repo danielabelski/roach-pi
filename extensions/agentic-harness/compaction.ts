@@ -4,7 +4,7 @@ export type CompactionPhase =
   | "idle"
   | "clarifying"
   | "planning"
-  | "ultraplanning"
+  | "milestoneplanning"
   | "reviewing"
   | "ultrareviewing";
 
@@ -76,7 +76,7 @@ The session is in agentic-plan-crafting mode. Your summary MUST emphasize:
 - Key implementation decisions and their rationale
 - Current task being worked on and its exact state`;
 
-    case "ultraplanning":
+    case "milestoneplanning":
       if (!goalDoc) return "";
       return `${docRef}
 ## Active Workflow: Agentic Milestone Planning

@@ -30,8 +30,8 @@ describe("Compaction Prompts", () => {
     expect(prompt).toContain("task progress");
   });
 
-  it("should include phase-specific section for ultraplanning", () => {
-    const prompt = getCompactionPrompt("ultraplanning", "docs/milestones.md");
+  it("should include phase-specific section for milestone planning", () => {
+    const prompt = getCompactionPrompt("milestoneplanning", "docs/milestones.md");
     expect(prompt).toContain("Active Workflow: Agentic Milestone Planning");
     expect(prompt).toContain("docs/milestones.md");
   });
