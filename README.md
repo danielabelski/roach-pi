@@ -38,7 +38,6 @@
 - [MCP Adapter](#mcp-adapter)
 - [Workspace Memory](#workspace-memory)
 - [Session Loop](#session-loop)
-- [Autonomous Dev](#autonomous-dev-experimental)
 - [Nested AGENTS.md](#nested-agentsmd)
 - [Commands Reference](#commands-reference)
 - [Tools Reference](#tools-reference)
@@ -63,10 +62,10 @@ It is intentionally inspectable: commands, tools, hooks, agents, and skills are 
 
 ## Architecture
 
-Eight bundled extensions, one disciplined engineering loop:
+Seven bundled extensions, one disciplined engineering loop:
 
 <p align="center">
-  <img src="assets/architecture-overview.svg" alt="ROACH PI extension architecture showing all eight modules" width="88%">
+  <img src="assets/architecture-overview.svg" alt="ROACH PI extension architecture overview" width="88%">
 </p>
 
 ---
@@ -300,23 +299,6 @@ Jobs are session-scoped, error-isolated, timeout-protected, and cleaned up on sh
 
 ---
 
-## Autonomous Dev (Experimental)
-
-Set `PI_AUTONOMOUS_DEV=1` to enable the GitHub issue engine:
-
-```bash
-export PI_AUTONOMOUS_DEV=1
-pi
-```
-
-```text
-/autonomous-dev start owner/repo
-/autonomous-dev status
-/autonomous-dev poll
-/autonomous-dev stop
-```
-
-The engine polls issues labeled `autonomous-dev:ready`, tracks progress in the footer/widget, asks for clarification when needed, and uses existing agents to implement work.
 
 ---
 
@@ -383,7 +365,6 @@ pi --no-nested-agents    Disable at startup
 |---|---|
 | `/setup` / `/init` | Configure recommended settings (`quietStartup: true`) |
 | `/team ...` | Optional bounded team runner (requires `PI_ENABLE_TEAM_MODE=1`) |
-| `/autonomous-dev ...` | Experimental GitHub issue engine (requires `PI_AUTONOMOUS_DEV=1`) |
 | `/nested-agents` | Toggle nested `AGENTS.md` context widget |
 | `/ask` | Manual smoke test for `ask_user_question` |
 
@@ -442,12 +423,6 @@ PI_ENABLE_TEAM_MODE=1 pi
 
 Disabled by default. Exposes the `team` tool and makes `/team` functional.
 
-### Autonomous Dev
-
-```bash
-PI_AUTONOMOUS_DEV=1 pi
-PI_AUTONOMOUS_LOG_PATH=~/.pi/autonomous-dev.log pi
-```
 
 ### Sandboxed Bash Approval
 
@@ -482,7 +457,6 @@ extensions/
   fff-search/          # FFF-backed find/grep/multi_grep and @ autocomplete
   session-loop/        # recurring session prompts
   workspace-memory/    # save/recall workspace memory
-  autonomous-dev/      # experimental GitHub issue processor
 docs/engineering-discipline/
   context/             # Context Briefs
   plans/               # implementation plans
@@ -511,7 +485,6 @@ npm --prefix extensions/agentic-harness test && npm --prefix extensions/agentic-
 npm --prefix extensions/fff-search test && npm --prefix extensions/fff-search run build
 npm --prefix extensions/session-loop test && npm --prefix extensions/session-loop run build
 npm --prefix extensions/workspace-memory test && npm --prefix extensions/workspace-memory run build
-npm --prefix extensions/autonomous-dev test && npm --prefix extensions/autonomous-dev run build
 ```
 
 There is no root `npm test` script in `package.json`; use the extension-level commands above.
