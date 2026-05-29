@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex */
 import { truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
 
 export function escapeControlChars(text: string): string {

@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex */
 import type { Theme } from "@mariozechner/pi-coding-agent";
 import { bundledThemesInfo, createHighlighter } from "shiki";
 import { hashString } from "./hash.ts";

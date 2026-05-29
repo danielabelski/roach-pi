@@ -6,18 +6,51 @@
   <title>ROACH PI — Pi Engineering Discipline Extension</title>
   <meta name="description" content="Strict engineering discipline and agentic orchestration for the pi coding agent. Multi-agent workflows, plan execution, and milestone planning.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪳</text></svg>">
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('theme');
+        if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      } catch (e) {}
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- Language Toggle -->
-  <div class="lang-toggle" id="langToggle">
-    <button class="active" onclick="setLang('en')">EN</button>
-    <button onclick="setLang('ko')">KR</button>
-  </div>
+  <!-- Navigation -->
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="nav-brand">
+        <span class="logo-mark" aria-hidden="true"></span>
+        ROACH PI
+      </a>
+      <ul class="nav-links">
+        <li><a href="#why"><span data-lang="en">Why ROACH PI?</span><span data-lang="ko">왜 ROACH PI?</span></a></li>
+        <li><a href="#quickstart"><span data-lang="en">Quick Start</span><span data-lang="ko">빠른 시작</span></a></li>
+        <li><a href="#features"><span data-lang="en">Features</span><span data-lang="ko">기능</span></a></li>
+        <li><a href="#faq"><span data-lang="en">FAQ</span><span data-lang="ko">FAQ</span></a></li>
+        <li><a href="features/workspace-memory.html"><span data-lang="en">Docs</span><span data-lang="ko">문서</span></a></li>
+      </ul>
+      <div class="nav-right">
+        <a class="nav-gh" href="https://github.com/tmdgusya/pi-engineering-discipline-extension" target="_blank">GitHub</a>
+        <!-- Language Toggle -->
+        <div class="lang-toggle" id="langToggle">
+          <button class="active" onclick="setLang('en')">EN</button>
+          <button onclick="setLang('ko')">KR</button>
+        </div>
+        <!-- Theme Toggle -->
+        <div class="theme-toggle" id="themeToggle">
+          <button onclick="setTheme('light')">LT</button>
+          <button onclick="setTheme('dark')">DK</button>
+        </div>
+      </div>
+    </div>
+  </nav>
 
   <script>
     function setLang(lang) {
@@ -30,60 +63,102 @@
       btns.forEach(function(b) { b.classList.remove('active'); });
       document.querySelector('#langToggle button[onclick="setLang(\'' + lang + '\')"]').classList.add('active');
     }
-  </script>
 
-  <!-- Navigation -->
-  <nav>
-    <div class="container">
-      <ul>
-        <li><a href="#why">● <span data-lang="en">Why ROACH PI?</span><span data-lang="ko">왜 ROACH PI?</span></a></li>
-        <li><a href="#quickstart">▶ <span data-lang="en">Quick Start</span><span data-lang="ko">빠른 시작</span></a></li>
-        <li><a href="#features">■ <span data-lang="en">Features</span><span data-lang="ko">기능</span></a></li>
-        <li><a href="#faq">● <span data-lang="en">FAQ</span><span data-lang="ko">FAQ</span></a></li>
-        <li><a href="features/workspace-memory.html">→ <span data-lang="en">Docs</span><span data-lang="ko">문서</span></a></li>
-        <li><a href="https://github.com/tmdgusya/pi-engineering-discipline-extension" target="_blank">→ GitHub</a></li>
-      </ul>
-    </div>
-  </nav>
+    function setTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+      try { localStorage.setItem('theme', theme); } catch (e) {}
+      var tbtns = document.querySelectorAll('#themeToggle button');
+      tbtns.forEach(function(b) { b.classList.remove('active'); });
+      document.querySelector('#themeToggle button[onclick="setTheme(\'' + theme + '\')"]').classList.add('active');
+    }
+    // Initialise theme toggle active state (default light)
+    (function () {
+      var current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      var sel = document.querySelector('#themeToggle button[onclick="setTheme(\'' + current + '\')"]');
+      if (sel) sel.classList.add('active');
+    })();
+  </script>
 
   <!-- Hero -->
   <section class="hero">
     <div class="container">
-      <div class="hero-ascii">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow">§ PI · AGENTIC DISCIPLINE</span>
+          <h1>
+            <span data-lang="en">Engineering <span class="em-italic grad">discipline</span>, with the agent wired in.</span>
+            <span data-lang="ko"><span class="em-italic grad">엔지니어링</span> 디사이플린, 에이전트가 내장된.</span>
+          </h1>
+          <p class="hero-subtitle">
+            <span data-lang="en">Strict engineering discipline and agentic orchestration for the <strong>pi coding agent</strong>. Multi-agent workflows, executable plans, and milestone-level decomposition.</span>
+            <span data-lang="ko"><strong>pi 코딩 에이전트</strong>를 위한 엄격한 엔지니어링 디사이플린과 에이전트 오케스트레이션. 다중 에이전트 워크플로, 실행 가능한 계획, 마일스톤 분해.</span>
+          </p>
+          <div class="hero-install">
+            <span class="mit-pill">MIT License</span>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="terminal-card">
+            <div class="terminal-bar">
+              <span class="terminal-dot red"></span>
+              <span class="terminal-dot yellow"></span>
+              <span class="terminal-dot green"></span>
+              <span class="terminal-tag">ROACH · PI</span>
+            </div>
+            <div class="terminal-body">
+<pre class="hero-ascii">
  ██████╗ ███████╗████████╗██████╗  ██████╗     ██████╗ ██╗   ██╗███████╗██████╗
  ██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔═══██╗    ██╔══██╗╚██╗ ██╔╝██╔════╝██╔══██╗
  ██████╔╝█████╗     ██║   ██████╔╝██║   ██║    ██████╔╝ ╚████╔╝ █████╗  ██████╔╝
  ██╔══██╗██╔══╝     ██║   ██╔══██╗██║   ██║    ██╔══██╗  ╚██╔╝  ██╔══╝  ██╔══██╗
  ██████╔╝███████╗   ██║   ██║  ██║╚██████╔╝    ██████╔╝   ██║   ███████╗██║  ██║
  ╚═════╝ ╚══════╝   ╚═╝   ╚═╝  ╚═╝ ╚═════╝     ╚═════╝    ╚═╝   ╚══════╝╚═╝  ╚═╝
-  </div>
-      <h1>
-        <span data-lang="en">Engineering Discipline Extension</span>
-        <span data-lang="ko">엔지니어링 디사이플린 익스텐션</span>
-      </h1>
-      <p class="hero-subtitle">
-        <span data-lang="en">Strict engineering discipline and agentic orchestration for the <strong>pi coding agent</strong>. Multi-agent workflows, executable plans, and milestone-level decomposition.</span>
-        <span data-lang="ko"><strong>pi 코딩 에이전트</strong>를 위한 엄격한 엔지니어링 디사이플린과 에이전트 오케스트레이션. 다중 에이전트 워크플로, 실행 가능한 계획, 마일스톤 분해.</span>
-      </p>
-      <div class="hero-install">
-        <span class="badge">MIT License</span>
+</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stat band -->
+      <div class="stat-band">
+        <div class="stat">
+          <div class="stat-num">18+</div>
+          <div class="stat-cap">Agents</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">MIT</div>
+          <div class="stat-cap">License</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">100</div>
+          <div class="stat-cap">Concurrent Jobs</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num">EN / KR</div>
+          <div class="stat-cap">Bilingual</div>
+        </div>
       </div>
     </div>
   </section>
 
   <div class="container">
 
-
-
     <!-- Why ROACH PI -->
     <section class="section" id="why">
-      <h2>
-        <span class="icon">●</span>
-        <span data-lang="en">Why ROACH PI?</span>
-        <span data-lang="ko">왜 ROACH PI인가요?</span>
-      </h2>
+      <div class="section-head">
+        <span class="eyebrow">§ 01 · WHY ROACH PI</span>
+        <h2>
+          <span data-lang="en">Why <span class="em-italic grad">ROACH PI</span>?</span>
+          <span data-lang="ko">왜 <span class="em-italic grad">ROACH PI</span>인가요?</span>
+        </h2>
+      </div>
 
-      <div class="grid-2" style="margin-top: 1.5rem;">
+      <div class="grid-2">
 
         <div class="card">
           <span class="feature-icon">●</span>
@@ -154,11 +229,13 @@
 
     <!-- Quick Start -->
     <section class="section" id="quickstart">
-      <h2>
-        <span class="icon">▶</span>
-        <span data-lang="en">Quick Start</span>
-        <span data-lang="ko">빠른 시작</span>
-      </h2>
+      <div class="section-head">
+        <span class="eyebrow">§ 02 · QUICK START</span>
+        <h2>
+          <span data-lang="en">Quick <span class="em-italic grad">Start</span></span>
+          <span data-lang="ko">빠른 <span class="em-italic grad">시작</span></span>
+        </h2>
+      </div>
 
       <p data-lang="en">
         The extension provides a streamlined workflow: <strong>clarify → goal</strong>. <code>/goal</code> creates, activates, continues, and verifies automatically.
@@ -167,83 +244,86 @@
         익스텐션은 단순한 워크플로를 제공합니다: <strong>명확화 → goal</strong>. <code>/goal</code>이 자동으로 생성, 활성화, 이어가기, 검증을 진행합니다.
       </p>
 
-      <ol class="step-list" style="margin-top: 1.5rem;">
+      <ol class="step-list">
 
-        <li>
+        <li class="step">
+          <div class="step-head"><span class="step-index">01</span></div>
           <h3>
             <code>/setup</code>
             <span data-lang="en"> — Configure Settings</span>
             <span data-lang="ko"> — 설정 구성</span>
           </h3>
-          <p data-lang="en">
+          <p class="step-desc" data-lang="en">
             Run once after installation to apply recommended settings. Sets <code>quietStartup: true</code> so the extension's custom ROACH PI banner replaces the default startup listing.
           </p>
-          <p data-lang="ko">
+          <p class="step-desc" data-lang="ko">
             설치 후 한 번 실행하여 권장 설정을 적용합니다. 익스텐션의 커스텀 ROACH PI 배너가 기본 시작 목록을 대체하도록 <code>quietStartup: true</code>를 설정합니다.
           </p>
         </li>
 
-        <li>
+        <li class="step">
+          <div class="step-head"><span class="step-index">02</span></div>
           <h3>
             <code>/clarify</code>
             <span data-lang="en"> — Resolve Ambiguity</span>
             <span data-lang="ko"> — 모호성 해결</span>
           </h3>
-          <p data-lang="en">
+          <p class="step-desc" data-lang="en">
             The agent asks dynamic, context-aware questions one at a time while exploring the codebase in parallel. Ends with a structured <strong>Goal Contract</strong> that defines scope, constraints, success criteria, and evidence requirements.
           </p>
-          <p data-lang="ko">
+          <p class="step-desc" data-lang="ko">
             에이전트가 코드베이스를 병렬로 탐색하면서 동적이고 문맥에 맞는 질문을 하나씩 묻습니다. 범위, 제약, 성공 기준, 증거 요구사항을 정의하는 구조화된 <strong>Goal Contract</strong>로 끝납니다.
           </p>
         </li>
 
-        <li>
+        <li class="step">
+          <div class="step-head"><span class="step-index">03</span></div>
           <h3>
             <code>/goal</code>
             <span data-lang="en"> — Activate Durable Execution</span>
             <span data-lang="ko"> — durable 실행 활성화</span>
           </h3>
-          <p data-lang="en">
+          <p class="step-desc" data-lang="en">
             Starts or continues a durable runtime that tracks goals, subgoals, todos, evidence, blockers, verifier receipts, and automatic continuation. Completion requires an independent verifier PASS.
           </p>
-          <p data-lang="ko">
+          <p class="step-desc" data-lang="ko">
             목표, 하위 목표, todo, 증거, 차단 요소, 검증 영수증, 자동 이어가기를 추적하는 durable runtime을 시작하거나 이어갑니다. 완료에는 독립 verifier PASS가 필요합니다.
           </p>
         </li>
 
-        <li>
+        <li class="step">
+          <div class="step-head"><span class="step-index">04</span></div>
           <h3>
             <code>/goal subgoal</code>
             <span data-lang="en"> — Subgoal Queueing</span>
             <span data-lang="ko"> — 하위 목표 큐잉</span>
           </h3>
-          <p data-lang="en">
+          <p class="step-desc" data-lang="en">
             For complex multi-step tasks. Queue subgoals with dependencies and required evidence, then let the goal runtime advance after verifier-guarded completion.
           </p>
-          <p data-lang="ko">
+          <p class="step-desc" data-lang="ko">
             복잡한 다단계 작업을 위해. 의존성과 필요한 증거가 있는 하위 목표를 큐에 넣고, verifier-guarded 완료 후 goal runtime이 진행하게 합니다.
           </p>
         </li>
 
-      </ol>
-
-        <li>
+        <li class="step">
+          <div class="step-head"><span class="step-index">05</span></div>
           <h3>
             <code>/loop</code>
             <span data-lang="en"> — Session Loop Scheduler</span>
             <span data-lang="ko"> — 세션 루프 스케줄러</span>
           </h3>
-          <p data-lang="en">
+          <p class="step-desc" data-lang="en">
             Schedule recurring prompts at fixed intervals. Cron-style timing — fires on schedule regardless of execution state. Supports <code>5s</code>, <code>10m</code>, <code>2h</code>, <code>1d</code> formats. Up to 100 concurrent jobs with per-job error isolation and automatic cleanup on session shutdown.
           </p>
-          <p data-lang="ko">
+          <p class="step-desc" data-lang="ko">
             고정 간격으로 반복 프롬프트를 스케줄링합니다. Cron 스타일 타이밍 — 실행 상태와 관계없이 스케줄대로 실행됩니다. <code>5s</code>, <code>10m</code>, <code>2h</code>, <code>1d</code> 형식을 지원합니다. 최대 100개 동시 작업, 작업별 에러 격리, 세션 종료 시 자동 정리.
           </p>
         </li>
 
       </ol>
 
-      <div class="card card-blue" style="margin-top: 2rem;">
+      <div class="card-blue" style="margin-top: 2rem;">
         <p data-lang="en" style="margin-bottom: 0;">
           <strong>💡 Tip:</strong> The <code>ask_user_question</code> tool is always available — the agent will ask clarifying questions autonomously whenever it detects ambiguity, even outside <code>/clarify</code> mode.
         </p>
@@ -255,13 +335,35 @@
 
     <!-- Features -->
     <section class="section" id="features">
-      <h2>
-        <span class="icon">■</span>
-        <span data-lang="en">Key Features</span>
-        <span data-lang="ko">주요 기능</span>
-      </h2>
+      <div class="section-head">
+        <span class="eyebrow">§ 03 · KEY FEATURES</span>
+        <h2>
+          <span data-lang="en">Key <span class="em-italic grad">Features</span></span>
+          <span data-lang="ko">주요 <span class="em-italic grad">기능</span></span>
+        </h2>
+      </div>
 
-      <div class="grid-2" style="margin-top: 1.5rem;">
+      <!-- At-a-glance spec strip -->
+      <div class="spec-strip">
+        <div class="spec-cell">
+          <span class="spec-key">Bundled Agents</span>
+          <span class="spec-val">18+</span>
+        </div>
+        <div class="spec-cell">
+          <span class="spec-key">Parallel Tasks</span>
+          <span class="spec-val">12 / 10</span>
+        </div>
+        <div class="spec-cell">
+          <span class="spec-key">Chain Depth</span>
+          <span class="spec-val">3 max</span>
+        </div>
+        <div class="spec-cell">
+          <span class="spec-key">Loop Jobs</span>
+          <span class="spec-val">100</span>
+        </div>
+      </div>
+
+      <div class="grid-2">
 
         <div class="card">
           <span class="feature-icon">★</span>
@@ -408,13 +510,14 @@
 
       </div>
     </section>
-    <section class="section" id="faq">
-      <h2>
-        <span class="icon">●</span>
-        FAQ
-      </h2>
 
-      <div style="margin-top: 1.5rem;">
+    <section class="section" id="faq">
+      <div class="section-head">
+        <span class="eyebrow">§ 04 · FAQ</span>
+        <h2>FAQ</h2>
+      </div>
+
+      <div class="faq-list">
 
         <details>
           <summary>
@@ -520,17 +623,20 @@
   <!-- Footer -->
   <footer>
     <div class="container">
-      <p>
-        <span data-lang="en">ROACH PI — Pi Engineering Discipline Extension</span>
-        <span data-lang="ko">ROACH PI — Pi 엔지니어링 디사이플린 익스텐션</span>
-      </p>
-      <p style="margin-top: 0.5rem;">
-        <span data-lang="en">Built with ■ terminal aesthetics and ● ASCII vibes</span>
-        <span data-lang="ko">■ 터미널 미학과 ● ASCII 무드로 구축</span>
-      </p>
-      <p style="margin-top: 0.5rem;">
-        <a href="https://github.com/tmdgusya/pi-engineering-discipline-extension" target="_blank">→ GitHub</a>
-      </p>
+      <div class="footer-inner">
+        <span class="logo-mark" aria-hidden="true"></span>
+        <p>
+          <span data-lang="en">ROACH PI — Pi Engineering Discipline Extension</span>
+          <span data-lang="ko">ROACH PI — Pi 엔지니어링 디사이플린 익스텐션</span>
+        </p>
+        <p>
+          <span data-lang="en">Built with ■ terminal aesthetics and ● ASCII vibes</span>
+          <span data-lang="ko">■ 터미널 미학과 ● ASCII 무드로 구축</span>
+        </p>
+        <p>
+          <a href="https://github.com/tmdgusya/pi-engineering-discipline-extension" target="_blank">→ GitHub</a>
+        </p>
+      </div>
     </div>
   </footer>
 

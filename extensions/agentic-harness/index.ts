@@ -75,6 +75,7 @@ import { defaultClarificationStateRoot } from "./clarification-storage.js";
 import { applyAndPersistClarificationCommand, loadClarificationState, persistClarificationState } from "./clarification-state-service.js";
 import { extractClarificationStateReplayEventsFromSessionEntries, restoreClarificationStateFromSnapshotAndEvents } from "./clarification-events.js";
 import { renderClarificationGateSummary, type ClarificationCommand, type ClarificationGoalContract, type ClarificationState } from "./clarification-state.js";
+import { resolveSessionScopedRunId } from "./runtime-run-id.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -483,7 +484,7 @@ export default function (pi: ExtensionAPI) {
       parameters: ClarificationStateParams,
       execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
         const toolCtx = ctx as any;
-        const runId = toolCtx?.runId || toolCtx?.sessionId || "default";
+        const runId = resolveSessionScopedRunId(toolCtx);
         const rootDir = defaultClarificationStateRoot(toolCtx?.cwd || process.cwd());
         const refresh = (state: ClarificationState) => {
           latestClarificationState = state;
@@ -1578,7 +1579,7 @@ Do not start multi-step implementation without a clear understanding of what the
       currentPhase = "clarifying";
       activeArtifactDocument = null;
       const commandCtx = ctx as any;
-      const clarificationRunId = commandCtx?.runId || commandCtx?.sessionId || "default";
+      const clarificationRunId = resolveSessionScopedRunId(commandCtx);
       const clarificationRootDir = defaultClarificationStateRoot(commandCtx?.cwd || process.cwd());
       const started = await applyAndPersistClarificationCommand(clarificationRunId, clarificationRootDir, { type: "start_interview", topic }, ctx);
       latestClarificationState = started.state;
@@ -1598,7 +1599,7 @@ Do not start multi-step implementation without a clear understanding of what the
     },
   });
 
-  const goalRunId = (ctx: any): string => ctx?.runId || ctx?.sessionId || "default";
+  const goalRunId = (ctx: any): string => resolveSessionScopedRunId(ctx);
   const goalRootDir = (ctx: any): string => defaultGoalStateRoot(ctx?.cwd || process.cwd());
   const notifyGoal = (ctx: any, message: string, level?: "info" | "error" | "success") => {
     if (ctx?.ui?.notify) ctx.ui.notify(message, level);
@@ -1697,7 +1698,7 @@ Do not start multi-step implementation without a clear understanding of what the
 
     if (!goal) {
       const clarificationRootDir = defaultClarificationStateRoot(ctx?.cwd || process.cwd());
-      const clarification = await loadClarificationState(ctx?.runId || ctx?.sessionId || "default", clarificationRootDir);
+      const clarification = await loadClarificationState(resolveSessionScopedRunId(ctx), clarificationRootDir);
       if (clarification.goalContract) {
         latestClarificationState = clarification;
         latestClarificationRootDir = clarificationRootDir;
@@ -1782,7 +1783,7 @@ Do not start multi-step implementation without a clear understanding of what the
   };
   const restoreLatestClarificationState = async (ctx: any, events: ReturnType<typeof extractClarificationStateReplayEventsFromSessionEntries>): Promise<ClarificationState> => {
     const rootDir = defaultClarificationStateRoot(ctx?.cwd || process.cwd());
-    const fallbackRunId = ctx?.runId || ctx?.sessionId || "default";
+    const fallbackRunId = resolveSessionScopedRunId(ctx);
     const runIds = [...new Set(events.map((event) => event.runId))];
     if (runIds.length === 0) {
       return (await restoreClarificationStateFromSnapshotAndEvents(rootDir, fallbackRunId, events)).state;

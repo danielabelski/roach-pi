@@ -1,3 +1,4 @@
+/* eslint-disable no-control-regex */
 import type { Theme } from "@mariozechner/pi-coding-agent";
 import { truncateToWidth, visibleWidth, type Component } from "@mariozechner/pi-tui";
 import {
@@ -468,7 +469,7 @@ function tokenListWeight(tokens: string[]): number {
 function tokenWeight(token: string): number {
   if (/^[A-Za-z_$][\w$]*$/.test(token)) return 2;
   if (/^\d+(?:\.\d+)?$/.test(token)) return 1.5;
-  if (/^(?:===|!==|=>|==|!=|<=|>=|&&|\|\||[+\-*\/%<>=!?:]+)$/.test(token)) return 0.75;
+  if (/^(?:===|!==|=>|==|!=|<=|>=|&&|\|\||[+\-*%<>=!?:]+)$/.test(token)) return 0.75;
   if (/^[{}()[\].,;]$/.test(token)) return 0.15;
   return 1;
 }
