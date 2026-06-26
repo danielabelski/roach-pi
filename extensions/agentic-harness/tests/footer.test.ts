@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { visibleWidth } from "@mariozechner/pi-tui";
 import type { ReadonlyFooterDataProvider } from "@mariozechner/pi-coding-agent";
 import { ICONS, ICONS_PLAIN, RoachFooter, setUseNerdIcons } from "../footer.js";
+import * as simpleTodo from "../simple-todo.js";
 import { setCurrentTodos, type SimpleTodoItem } from "../simple-todo.js";
 import type { FooterGlyphMode } from "../ui-settings.js";
 
@@ -431,5 +432,75 @@ describe("RoachFooter status bridge", () => {
     for (const width of [28, 44, 80]) {
       expectAllLinesFit(footer.render(width), width);
     }
+  });
+});
+
+describe("RoachFooter PI_FPS segment", () => {
+  const origFps = process.env.PI_FPS;
+
+  afterEach(() => {
+    if (origFps === undefined) delete process.env.PI_FPS;
+    else process.env.PI_FPS = origFps;
+  });
+
+  it("does not render the FPS segment when PI_FPS is unset", () => {
+    delete process.env.PI_FPS;
+    const rendered = createFooter().render(120).join("\n");
+    expect(rendered).not.toContain("FPS");
+  });
+
+  it("renders the FPS segment when PI_FPS=1", () => {
+    process.env.PI_FPS = "1";
+    const footer = createFooter();
+    const first = footer.render(120).join("\n");
+    expect(first).toContain("FPS");
+    // A second paint keeps the segment (and may show a numeric value).
+    const second = footer.render(120).join("\n");
+    expect(second).toContain("FPS");
+  });
+
+  it("does not change default line count when PI_FPS is unset", () => {
+    delete process.env.PI_FPS;
+    const lines = createFooter().render(150);
+    expect(lines.length).toBe(3);
+  });
+
+  it("keeps every rendered line width-safe when PI_FPS is on", () => {
+    process.env.PI_FPS = "1";
+    for (const width of [40, 80, 150]) {
+      expectAllLinesFit(createFooter().render(width), width);
+    }
+  });
+});
+
+describe("RoachFooter per-frame todo cloning", () => {
+  // Renders clone the todo list once per paint and thread it through both the
+  // spinner-timer gate and the todo renderer. Previously getCurrentTodos()
+  // (a full deep-clone) ran twice every frame.
+  it("calls getCurrentTodos at most once per render()", () => {
+    const todos: SimpleTodoItem[] = [
+      { content: "do thing", status: "in_progress", priority: "high" },
+      { content: "done thing", status: "completed", priority: "medium" },
+    ];
+    setCurrentTodos(todos);
+
+    // Spy AFTER construction: the constructor calls updateSpinnerTimer() once
+    // (a one-time setup cost, not per-frame). We isolate the render() hot path.
+    const footer = createFooter();
+    const spy = vi.spyOn(simpleTodo, "getCurrentTodos");
+    footer.render(120);
+    expect(spy.mock.calls.length).toBeLessThanOrEqual(1);
+    spy.mockRestore();
+  });
+
+  it("renders todos identically after the threading refactor", () => {
+    setCurrentTodos([
+      { content: "alpha", status: "in_progress", priority: "high" },
+      { content: "beta", status: "completed", priority: "medium" },
+    ] as SimpleTodoItem[]);
+    const footer = createFooter();
+    const rendered = footer.render(120).join("\n");
+    expect(rendered).toContain("Todo 1/2");
+    expect(rendered).toContain("alpha");
   });
 });

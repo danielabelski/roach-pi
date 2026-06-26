@@ -33,5 +33,19 @@ Then immediately type `/` and inspect logs:
 tail -n 120 ~/.pi/agent/pi-debug.log
 ```
 
-### 4) Keep debug off by default
+### 4) TUI painted-frame FPS overlay (PI_FPS)
+```bash
+PI_FPS=1 pi
+```
+- Adds a live `FPS <n>` segment to the agentic-harness footer (metrics row).
+- Counts actually-painted frames/sec — i.e. `RoachFooter.render()` invocations,
+  which the TUI coalesces/throttles, so this is the real frame rate, not the raw
+  `requestRender()` call rate.
+- When the UI is idle (no animation/streaming/typing) the TUI stops painting and
+  the number decays to `FPS 0`; it rises during spinner animation, streaming
+  output, or typing. That idle→0 behavior is honest, not a bug.
+- Implemented in `extensions/agentic-harness`; disabled by default → zero
+  overhead and no output change when unset.
+
+### 5) Keep debug off by default
 These flags are opt-in and should remain off in normal usage.

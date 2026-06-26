@@ -6,6 +6,7 @@ import { PLAN_PROGRESS_SPINNER_MS } from "./harness-progress.js";
 import type { FooterGlyphMode, FooterPresetName } from "./ui-settings.js";
 import { getCurrentTodos, subscribeOnChange, getTodoMarker, type SimpleTodoItem } from "./simple-todo.js";
 import { shimmerText, type ShimmerPalette } from "./shimmer.js";
+import { FpsTracker, isFpsEnabled } from "./fps-tracker.js";
 
 // Types
 
@@ -50,7 +51,7 @@ export interface ActiveTools {
   running: Map<string, string | ActiveToolStatus>;
 }
 
-type FooterSegmentId = "logo" | "path" | "git" | "model" | "thinking" | "context" | "goal" | "statuses" | "tools" | "cache";
+type FooterSegmentId = "logo" | "path" | "git" | "model" | "thinking" | "context" | "goal" | "statuses" | "tools" | "cache" | "fps";
 
 type FooterSegmentColor = ThemeColor | "logo" | "path" | "git" | "model" | "thinking" | "context" | "default";
 
@@ -85,6 +86,7 @@ const ICONS = {
   tool: "󰒓",
   status: "󰄬",
   goal: "󰓎",
+  fps: "󰜴",
 } as const;
 
 const ICONS_PLAIN = {
@@ -98,6 +100,7 @@ const ICONS_PLAIN = {
   tool: "▶",
   status: "●",
   goal: "◎",
+  fps: "⚡",
 } as const;
 
 let useNerdIcons = false;
@@ -111,10 +114,11 @@ function getIcons(glyphs?: FooterGlyphMode) {
 const FOOTER_PRESET_DEFINITIONS: Record<FooterPresetName, FooterPresetDefinition> = {
   // Two rows: an identity/status row (which may truncate long goal/tool/status
   // text) and a dedicated live-metrics row so context + cache rate are never
-  // pushed off-screen by a long goal summary.
-  default:  { lines: [["logo", "goal", "model", "path", "git", "tools", "statuses"], ["context", "cache"]] },
-  compact:  { lines: [["logo", "goal", "model", "path", "git", "context", "cache", "statuses"]] },
-  minimal:  { lines: [["logo", "goal", "path", "git", "context", "statuses"]] },
+  // pushed off-screen by a long goal summary. The opt-in `FPS` segment rides
+  // the metrics row when PI_FPS is enabled (absent otherwise).
+  default:  { lines: [["logo", "goal", "model", "path", "git", "tools", "statuses"], ["context", "cache", "fps"]] },
+  compact:  { lines: [["logo", "goal", "model", "path", "git", "context", "cache", "fps", "statuses"]] },
+  minimal:  { lines: [["logo", "goal", "path", "git", "context", "fps", "statuses"]] },
 };
 
 // Helpers
@@ -242,6 +246,9 @@ export class RoachFooter implements Component {
   private getGoalSummary: () => string | undefined;
   private unsubscribeTodo: (() => void) | null = null;
   private spinnerTimer: ReturnType<typeof setInterval> | null = null;
+  // PI_FPS opt-in painted-frame counter. null when PI_FPS is unset so disabled
+  // mode has zero overhead and no footer output change.
+  private fps: FpsTracker | null = isFpsEnabled() ? new FpsTracker() : null;
 
   constructor(
     theme: Theme,
@@ -277,12 +284,12 @@ export class RoachFooter implements Component {
     this.tui?.requestRender();
   }
 
-  private hasAnimatedFooterContent(): boolean {
-    return getCurrentTodos().some((t) => t.status === "in_progress") || this.activeTools.running.size > 0;
+  private hasAnimatedFooterContent(todos?: SimpleTodoItem[]): boolean {
+    return (todos ?? getCurrentTodos()).some((t) => t.status === "in_progress") || this.activeTools.running.size > 0;
   }
 
-  private updateSpinnerTimer() {
-    const has = this.hasAnimatedFooterContent();
+  private updateSpinnerTimer(todos?: SimpleTodoItem[]) {
+    const has = this.hasAnimatedFooterContent(todos);
     if (has && !this.spinnerTimer) {
       this.spinnerTimer = setInterval(() => {
         if (!this.hasAnimatedFooterContent()) { this.updateSpinnerTimer(); return; }
@@ -293,25 +300,25 @@ export class RoachFooter implements Component {
     }
   }
 
-  private renderSimpleTodos(width: number): string[] {
-    const todos = getCurrentTodos();
-    if (todos.length === 0) return [];
+  private renderSimpleTodos(width: number, todos?: SimpleTodoItem[]): string[] {
+    const list = todos ?? getCurrentTodos();
+    if (list.length === 0) return [];
 
     const t = this.theme;
     const lines: string[] = [];
     const pw = Math.max(0, width - 4);
-    const done = todos.filter((t) => t.status === "completed").length;
-    const inProgress = todos.find((t) => t.status === "in_progress");
+    const done = list.filter((t) => t.status === "completed").length;
+    const inProgress = list.find((t) => t.status === "in_progress");
 
     // Header with progress
-    const header = `Todo ${done}/${todos.length}`;
+    const header = `Todo ${done}/${list.length}`;
     lines.push(fitLine(`  ${t.fg("accent", t.bold(header))}`, width));
 
     // Show in_progress item first (most important), then others (completed + pending)
     const maxItems = 5;
     const shown: SimpleTodoItem[] = [];
     if (inProgress) shown.push(inProgress);
-    for (const todo of todos) {
+    for (const todo of list) {
       if (shown.length >= maxItems) break;
       if (todo === inProgress) continue;
       shown.push(todo);
@@ -326,7 +333,7 @@ export class RoachFooter implements Component {
       lines.push(fitLine(`    ${t.fg(color, marker)} ${t.fg("dim", text)}`, width));
     }
 
-    const remaining = todos.filter((t) => !shown.includes(t)).length;
+    const remaining = list.filter((t) => !shown.includes(t)).length;
     if (remaining > 0) {
       lines.push(fitLine(`    ${t.fg("dim", `... +${remaining} more`)}`, width));
     }
@@ -335,11 +342,16 @@ export class RoachFooter implements Component {
   }
 
   render(width: number): string[] {
-    this.updateSpinnerTimer();
+    this.fps?.tick();
+    // Clone the todo list ONCE per paint and thread it through both the
+    // spinner-timer gate and the todo renderer. Previously getCurrentTodos()
+    // (a full deep-clone) ran twice every frame.
+    const todos = getCurrentTodos();
+    this.updateSpinnerTimer(todos);
     const normalLines = this.renderNormalFooter(width);
     const border = normalLines[0];
 
-    const simpleTodoLines = this.renderSimpleTodos(width);
+    const simpleTodoLines = this.renderSimpleTodos(width, todos);
     const hasSimpleTodos = simpleTodoLines.length > 0;
 
     if (hasSimpleTodos) {
@@ -417,6 +429,12 @@ export class RoachFooter implements Component {
     }
 
     segs.set("model", { id: "model", text: modelDisplay, icon: icons.model, color: "model", priority: 2 });
+
+    // Opt-in painted-frame rate (PI_FPS). Only present when enabled; absent
+    // segments are filtered by pickSegments, so disabled mode is unchanged.
+    if (this.fps) {
+      segs.set("fps", { id: "fps", text: this.fps.display(), icon: icons.fps, color: "dim", priority: 0 });
+    }
 
     segs.set("context", { id: "context", text: ctxPart, icon: icons.context, color: "context", priority: 0 });
     segs.set("cache", { id: "cache", text: cacheText, icon: icons.cache, color: cacheColor, priority: 5 });

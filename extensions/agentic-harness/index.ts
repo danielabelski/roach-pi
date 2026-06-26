@@ -145,19 +145,39 @@ async function computeGitStats(cwd: string): Promise<GitStats> {
   return result;
 }
 
-function getModelInfo(ctx: any): ModelInfo {
+// Memoize the (relatively) expensive provider-filter + contextWindow sort. The
+// footer calls getModelInfo() on every painted frame (up to ~60fps while
+// streaming), but the model registry is near-static: the "isLatest" flagship
+// determination only changes when the active model changes or models are
+// added/removed for the provider. Key on model.id + registry size (both O(1))
+// and recompute only on a real change. `name` is refreshed every call (cheap)
+// so a rename stays correct without invalidating the cached isLatest calc.
+let modelInfoCache: { sig: string; isLatest: boolean } | null = null;
+
+export function getModelInfo(ctx: any): ModelInfo {
   const model = ctx.model;
   if (!model) return { name: "no model", isLatest: false };
 
   const available = ctx.modelRegistry.getAvailable();
+  const sig = `${model.id}|${available.length}`;
+  if (modelInfoCache && modelInfoCache.sig === sig) {
+    return { name: model.name, isLatest: modelInfoCache.isLatest };
+  }
+
   const sameProvider = available.filter((m: any) => m.provider === model.provider);
-  if (sameProvider.length === 0) return { name: model.name, isLatest: false };
-
-  // Sort by contextWindow descending; highest is considered "latest" flagship
-  sameProvider.sort((a: any, b: any) => b.contextWindow - a.contextWindow);
-  const isLatest = sameProvider[0].id === model.id;
-
+  let isLatest = false;
+  if (sameProvider.length > 0) {
+    // Sort by contextWindow descending; highest is considered "latest" flagship
+    sameProvider.sort((a: any, b: any) => b.contextWindow - a.contextWindow);
+    isLatest = sameProvider[0].id === model.id;
+  }
+  modelInfoCache = { sig, isLatest };
   return { name: model.name, isLatest };
+}
+
+/** Test-only: clear the modelInfo memo so tests get deterministic cold-cache behavior. */
+export function _resetModelInfoCacheForTests(): void {
+  modelInfoCache = null;
 }
 
 const MICROCOMPACTION_ENV = "PI_AGENTIC_MICROCOMPACTION";
