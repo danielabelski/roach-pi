@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.40.2](https://github.com/tmdgusya/roach-pi/compare/v1.40.1...v1.40.2) (2026-07-09)
+
+### Bug Fixes
+
+* **agentic-harness:** strip codex reasoning-summary placeholders from thinking display ([32089aa](https://github.com/tmdgusya/roach-pi/commit/32089aa6bb264d801f2e2cab094f75206ecc6667))
+* **agentic-harness:** tolerate mocked pi-coding-agent module when installing thinking filter ([97ff45d](https://github.com/tmdgusya/roach-pi/commit/97ff45d01e06cbc3c2be8cdf2e9eb6a3f31be057))
+
 ## [1.40.1](https://github.com/tmdgusya/roach-pi/compare/v1.40.0...v1.40.1) (2026-07-09)
 
 ### Bug Fixes
