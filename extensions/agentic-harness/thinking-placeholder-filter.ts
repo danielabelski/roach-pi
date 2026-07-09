@@ -46,9 +46,14 @@ let installed = false;
  */
 export function installThinkingPlaceholderFilter(): void {
   if (installed) return;
-  const proto = AssistantMessageComponent?.prototype as {
-    updateContent?: (message: unknown) => void;
-  } | undefined;
+  let proto: { updateContent?: (message: unknown) => void } | undefined;
+  try {
+    proto = AssistantMessageComponent?.prototype as unknown as typeof proto;
+  } catch {
+    // vi.mock module factories throw on exports they don't define; there is
+    // no real component to patch in that case.
+    return;
+  }
   if (!proto || typeof proto.updateContent !== "function") return;
   const original = proto.updateContent;
   proto.updateContent = function (message: unknown) {
