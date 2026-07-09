@@ -6,6 +6,7 @@ import { resolveAgenticUiSettings } from "./ui-settings.js";
 import { shimmerText, type ShimmerPalette } from "./shimmer.js";
 import { freezeWelcomeShimmer, registerWelcomeCommand, showWelcomeHeader, unfreezeWelcomeShimmer } from "./welcome-ui.js";
 import { registerEditorStashCommands } from "./editor-stash.js";
+import { installThinkingPlaceholderFilter } from "./thinking-placeholder-filter.js";
 import { installEditorComposition } from "./editor-composition.js";
 import { homedir } from "os";
 import { join, dirname, resolve } from "path";
@@ -314,6 +315,10 @@ function preferTodoSurfaceTools(pi: any): void {
 }
 
 export default function (pi: ExtensionAPI) {
+  // Codex reasoning summaries embed "<!-- -->" placeholders that the terminal
+  // Markdown renderer prints literally; strip them at display time only.
+  installThinkingPlaceholderFilter();
+
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const BUNDLED_AGENTS_DIR = join(__dirname, "agents");
   const BUNDLED_SKILLS_DIR = join(__dirname, "skills");

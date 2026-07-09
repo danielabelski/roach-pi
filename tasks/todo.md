@@ -59,3 +59,22 @@ Completed.
 ---
 
 # Current: Fix zombie async-run inheritance across pi sessions
+
+---
+
+# Current: Strip codex "<!-- -->" thinking placeholders at render time
+
+Done when:
+- [x] Root cause confirmed with evidence (session JSONL shows OpenAI Codex sends `**Header**\n\n<!-- -->` reasoning-summary parts; pi/pi-ai never generate the string).
+- [x] Failing guard exists before the fix (component-level test renders literal `<!-- -->`).
+- [x] Display-only fix: stored session data and provider round-trip payload stay untouched.
+- [x] Guard passes; no regressions in the extension test suite.
+
+## Review
+
+- Root cause: OpenAI Codex reasoning summaries use empty HTML comments as withheld-body placeholders; invisible in HTML UIs but pi's terminal Markdown renderer prints them literally (`assistant-message.js` renders `content.thinking` verbatim).
+- `extensions/agentic-harness/thinking-placeholder-filter.ts`: `stripThinkingPlaceholders` (removes `<!--\s*-->`, collapses leftover blank lines) + `installThinkingPlaceholderFilter` (idempotent prototype wrap of `AssistantMessageComponent.updateContent`; sanitizes a display copy only, no-ops safely if core shape changes).
+- `extensions/agentic-harness/index.ts`: installs the filter at extension entry.
+- `extensions/agentic-harness/tests/thinking-placeholder.test.ts`: characterizes unpatched output (contains `<!-- -->`), asserts patched output drops placeholders but keeps headers, stored message unmutated, install idempotent, non-empty HTML comments preserved.
+- Verification: `bun test extensions/agentic-harness/tests/thinking-placeholder.test.ts` — PASS, 6 tests.
+- Verification: full suite failure list identical before/after (59 pre-existing bun/vitest-compat failures, zero new).
